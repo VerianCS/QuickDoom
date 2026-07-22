@@ -17,45 +17,45 @@ While modern desktop launchers consume 500MB of RAM and take 4 seconds to displa
 
 ---
 
-## ⚡ Why Does This Exist?
+##  Why Does This Exist?
 
 Look, classic launchers like ZDL were legendary back in 2006, but their UIs look like they were designed during the Bronze Age. On the flip side, modern web-wrapper launchers eat more RAM than Chrome with 50 tabs open.
 
 So I built **QuickDoom**: a native desktop launcher that combines a **modern cyberpunk UI** with **insane low-level performance**.
 
-### ✨ Highlights
-* 🚀 **Instant Boot:** Deferred font/asset parsing drops cold-start to **121ms** (debug) and **<20ms** (release).
-* 📦 **10MB Single Binary:** Compressed using UPX and packed into a standalone `.exe` with `warp-packer`. No install wizards required.
-* 🎯 **Drag-and-Drop Mod Priority:** Drag `.pk3` or `.wad` files straight into the launcher and reorder load priorities on the fly.
-* 💾 **Profile & Preset System:** Save your favorite mod combinations (*Brutal Doom*, *Project Brutality*, *Ancient Aliens*) powered by Hive & Riverpod.
-* 🛠️ **Process Engine & Crash Logs:** Executes binaries via native `dart:io`, streams `stdout`/`stderr` logs in real-time, auto-minimizes during gameplay, and restores when you quit.
-* 🔔 **System Tray Stealth Mode:** Minimizes to the system tray, intercepts the close button, and sits quietly using ~0% CPU.
+###   Highlights
+*  **Instant Boot:** Deferred font/asset parsing drops cold-start to **121ms** (debug) and **<20ms** (release).
+*  **10MB Single Binary:** Compressed using UPX and packed into a standalone `.exe` with `warp-packer`. No install wizards required.
+*  **Drag-and-Drop Mod Priority:** Drag `.pk3` or `.wad` files straight into the launcher and reorder load priorities on the fly.
+*  **Profile & Preset System:** Save your favorite mod combinations (*Brutal Doom*, *Project Brutality*, *Ancient Aliens*) powered by Hive & Riverpod.
+*  **Process Engine & Crash Logs:** Executes binaries via native `dart:io`, streams `stdout`/`stderr` logs in real-time, auto-minimizes during gameplay, and restores when you quit.
+*  **System Tray Stealth Mode:** Minimizes to the system tray, intercepts the close button, and sits quietly using ~0% CPU.
 
 ---
 
-## 📐 System Architecture
+##  System Architecture
 
 QuickDoom is engineered using **Clean Architecture** and **Riverpod State Management**. It completely decouples OS process execution and file I/O from the Flutter presentation layer.
 
 ```mermaid
 flowchart TD
-    subgraph Presentation["🎨 Presentation Layer (UI and UX)"]
+    subgraph Presentation[" Presentation Layer (UI and UX)"]
         UI["Custom Titlebar and Main Dashboard"]
         DragDrop["Drag-and-Drop WAD Manager"]
         Tray["System Tray Listener and Window Lifecycle"]
     end
 
-    subgraph StateManagement["🧠 State Management (Riverpod)"]
+    subgraph StateManagement[" State Management (Riverpod)"]
         AppController["Game Launch Controller"]
         ProfileState["Active Profile and WAD Priority State"]
     end
 
-    subgraph Domain["⚡ Domain Layer (Pure Business Logic)"]
+    subgraph Domain[" Domain Layer (Pure Business Logic)"]
         CmdBuilder["Launch Command Builder"]
         OrderSort["WAD Priority Array Sorter"]
     end
 
-    subgraph SystemLayer["💻 Data and System Execution Layer"]
+    subgraph SystemLayer[" Data and System Execution Layer"]
         HiveDB[("Hive Local Storage (Profiles and Ports)")]
         DartIO["dart:io Process.start Engine"]
         LogStream["stdout / stderr Ring Buffer Stream"]
@@ -91,7 +91,7 @@ flowchart TD
 I am obsessed with micro-optimizations. Here is how QuickDoom stacks up against
 typical desktop apps:
 
-| Metric                 | Typical Electron App 🐢 | Standard Flutter App 🚗 | **QuickDoom 🚀**                        |
+| Metric                 | Typical Electron App   | Standard Flutter App    | **QuickDoom **                        |
 | :--------------------- | :--------------------- | :--------------------- | :------------------------------------- |
 | **Cold Boot Time**     | \~2,500 ms             | \~400 ms               | **221 ms (Debug) / \<120 ms (Release)** |
 | **Executable Size**    | \~150 MB               | \~35 MB                | **\~10.5 MB (UPX + Warp Packed)**       |
@@ -108,7 +108,7 @@ How I Achieved a 121ms Boot:
 3.  Lazy Hive Hydration: O(1) loading strategy that hydrates only the active
     profile on startup instead of parsing the whole database.
 
-🛠️ Tech Stack & Dependencies
+    Tech Stack & Dependencies
 
   - Framework: Flutter Desktop (Windows, Linux, macOS)
   - Language: Dart 3.x
@@ -117,7 +117,7 @@ How I Achieved a 121ms Boot:
   - Desktop Tools: window_manager, tray_manager, desktop_drop, file_picker
   - Compilation & Packaging: CMake (/Os Size Optimization), UPX, warp-packer
 
-🚀 Building & Running Locally
+   Building & Running Locally
 
 Prerequisites
 
@@ -144,7 +144,7 @@ flutter test
 # Build optimized release build with symbol stripping & obfuscation
 flutter build windows --release --split-debug-info=./symbols --obfuscate --tree-shake-icons
 
-🤖 CI/CD Pipeline
+  CI/CD Pipeline
 
 QuickDoom features an automated GitHub Actions Matrix pipeline
 (.github/workflows/release.yml).
@@ -158,7 +158,7 @@ triggers:
 4.  warp-packer single-executable packaging.
 5.  Automatic publishing of ~5MB single-file binaries to GitHub Releases!
 
-📜 License
+  License
 
 Distributed under the MIT License. See LICENSE for more information.
 
