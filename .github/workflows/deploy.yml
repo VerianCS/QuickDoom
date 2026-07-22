@@ -41,7 +41,7 @@ jobs:
             flutter_target: macos
             warp_arch: macos-x64
             warp_bin: macos-x64.warp-packer
-            exec_name: quickdoom.app/Contents/MacOS/quickdoom
+            exec_name: QuickDoom.app/Contents/MacOS/QuickDoom
             build_dir: build/macos/Build/Products/Release
             output_name: QuickDoom-macOS-Standalone
             zip_name: QuickDoom-macOS-Portable.zip
@@ -51,12 +51,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Install Linux System Dependencies (Ubuntu Runner Only)
+      # 2. Install Linux System Dependencies 
       - name: Install Linux Build Dependencies
         if: matrix.target == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsecret-1-dev libjsoncpp-dev upx
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsecret-1-dev libjsoncpp-dev libayatana-appindicator3-dev libappindicator3-dev upx
 
       # 3. Install UPX Compression Tool (Windows & macOS Runners)
       - name: Install UPX (Windows)
@@ -83,7 +83,13 @@ jobs:
         run: |
           flutter build ${{ matrix.flutter_target }} --release --split-debug-info=./symbols --obfuscate --tree-shake-icons
 
-      # 7. UPX Compression Phase (Compresses DLLs / Dynamic Libraries)
+      # 7. Clean macOS Debug Symbols (.dSYM) to prevent 188MB file bloat
+      - name: Clean macOS Debug Symbols (.dSYM)
+        if: matrix.target == 'macOS'
+        run: |
+          rm -rf ${{ matrix.build_dir }}/*.dSYM
+
+      # 8. UPX Compression Phase (Compresses DLLs / Dynamic Libraries)
       - name: Compress Binaries with UPX (Windows)
         if: matrix.target == 'Windows'
         shell: pwsh
@@ -97,16 +103,16 @@ jobs:
           upx --best --ultra-brute ${{ matrix.build_dir }}/lib/*.so || true
           upx --best --ultra-brute ${{ matrix.build_dir }}/${{ matrix.exec_name }} || true
 
-      # Note: UPX is skipped on macOS binaries to avoid Apple Gatekeeper / Mach-O codesign invalidation issues.
+      # Note: UPX is skipped on macOS binaries to avoid Apple Gatekeeper / Mach-O codesign invalidation.
 
-      # 8. Download warp-packer Tool
+      # 9. Download warp-packer Tool
       - name: Download warp-packer
         shell: bash
         run: |
           curl -Lo warp-packer https://github.com/dgiagio/warp/releases/download/v0.3.0/${{ matrix.warp_bin }}
           chmod +x warp-packer
 
-      # 9. Single-Executable Assembly with warp-packer
+      # 10. Single-Executable Assembly with warp-packer
       - name: Pack Single Executable with warp-packer
         shell: bash
         run: |
@@ -117,17 +123,22 @@ jobs:
             --output ${{ matrix.output_name }}
           chmod +x ${{ matrix.output_name }} || true
 
-      # 10. Generate Traditional Zip Archives (As a Backup Release Artifact)
+      # 11. Generate Traditional Portable Zip Archives
       - name: Create Portable Zip Archive (Windows)
         if: matrix.target == 'Windows'
         shell: pwsh
         run: Compress-Archive -Path ${{ matrix.build_dir }}/* -DestinationPath ${{ matrix.zip_name }}
 
-      - name: Create Portable Zip Archive (Linux/macOS)
-        if: matrix.target != 'Windows'
+      - name: Create Portable Zip Archive (Linux)
+        if: matrix.target == 'Linux'
         run: zip -r ${{ matrix.zip_name }} ${{ matrix.build_dir }}/*
 
-      # 11. Publish Artifacts directly to GitHub Release
+      - name: Create Portable Zip Archive (macOS)
+        if: matrix.target == 'macOS'
+        run: |
+          (cd ${{ matrix.build_dir }} && zip -r $GITHUB_WORKSPACE/${{ matrix.zip_name }} *.app)
+
+      # 12. Publish Assets directly to GitHub Release
       - name: Publish Assets to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
