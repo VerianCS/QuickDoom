@@ -56,7 +56,7 @@ jobs:
         if: matrix.target == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsecret-1-dev libjsoncpp-dev libayatana-appindicator3-dev libappindicator3-dev upx
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsecret-1-dev libjsoncpp-dev libappindicator3-dev upx
 
       # 3. Install UPX Compression Tool (Windows & macOS Runners)
       - name: Install UPX (Windows)

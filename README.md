@@ -3,17 +3,20 @@
 ---
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Boot_Time-121ms_(Debug)_%2F_<20ms_(Release)-brightgreen?style=for-the-badge&logo=speedtest" alt="Boot Time">
-  <img src="https://img.shields.io/badge/Executable_Size-~5MB_Standalone-crimson?style=for-the-badge&logo=flutter" alt="App Size">
+  <img src="https://img.shields.io/badge/Boot_Time-221ms_(Debug)_%2F_<120ms_(Release)-brightgreen?style=for-the-badge&logo=speedtest" alt="Boot Time">
+  <img src="https://img.shields.io/badge/Executable_Size-~10MB_Standalone-crimson?style=for-the-badge&logo=flutter" alt="App Size">
   <img src="https://img.shields.io/badge/RAM_Usage-Microscopic-blueviolet?style=for-the-badge&logo=ram" alt="RAM Usage">
   <img src="https://img.shields.io/badge/Electron_Bloat-0%25-red?style=for-the-badge&logo=prohibit" alt="No Electron">
 </p>
+
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/00ae7dae-cc87-4b7f-86d1-949ec12608b5" />
+
 
 > **"Rip and tear... until the boot time is ZERO."**
 
 **QuickDoom** is a blazingly fast, modern, cross-platform Doom source port & mod launcher built with Flutter Desktop. 
 
-While modern desktop launchers consume 500MB of RAM and take 4 seconds to display a button (*looking at you, Electron apps*), QuickDoom boots in **121 milliseconds**, weighs a tiny **~5MB**, and lets you jump straight into blasting demons with `GZDoom`, `UZDoom`, or `Zandronum` before your coffee even finishes brewing.
+While modern desktop launchers consume 500MB of RAM and take 4 seconds to display a button (*looking at you, Electron apps*), QuickDoom boots in **121 milliseconds**, weighs a tiny **~10MB**, and lets you jump straight into blasting demons with `GZDoom`, `UZDoom`, or `Zandronum` before your coffee even finishes brewing.
 
 ---
 
@@ -156,7 +159,7 @@ triggers:
 2.  AOT Tree-Shaking & Symbol Stripping.
 3.  UPX Dynamic Library Compression.
 4.  warp-packer single-executable packaging.
-5.  Automatic publishing of ~5MB single-file binaries to GitHub Releases!
+5.  Automatic publishing of ~10MB single-file binaries to GitHub Releases!
 
   License
 
