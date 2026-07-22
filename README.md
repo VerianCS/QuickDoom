@@ -1,21 +1,8 @@
-# QuickdDom
-
-A doom launcher written in flutter.
-
-
-
-
-Here is a complete, hilarious, and technically impressive README.md tailored for
-your GitHub repository. It features a native Mermaid.js Architecture Diagram
-(which renders directly inside GitHub!), funny Doom-themed banter, and all your
-hard-earned benchmarks.
-
-You can copy and paste this directly into your repository's README.md file!
-
 # 🩸 QuickDoom
+[![Build & Publish Multi-Platform Release](https://github.com/VerianCS/QuickToDoom/actions/workflows/deploy.yml/badge.svg)](https://github.com/VerianCS/QuickToDoom/actions/workflows/deploy.yml)
+---
 
 <p align="center">
-  [![Build & Publish Multi-Platform Release](https://github.com/VerianCS/QuickToDoom/actions/workflows/deploy.yml/badge.svg)](https://github.com/VerianCS/QuickToDoom/actions/workflows/deploy.yml)
   <img src="https://img.shields.io/badge/Boot_Time-121ms_(Debug)_%2F_<20ms_(Release)-brightgreen?style=for-the-badge&logo=speedtest" alt="Boot Time">
   <img src="https://img.shields.io/badge/Executable_Size-~5MB_Standalone-crimson?style=for-the-badge&logo=flutter" alt="App Size">
   <img src="https://img.shields.io/badge/RAM_Usage-Microscopic-blueviolet?style=for-the-badge&logo=ram" alt="RAM Usage">
