@@ -13,7 +13,7 @@
 
 **QuickDoom** is a blazingly fast, modern, cross-platform Doom source port & mod launcher built with Flutter Desktop. 
 
-While modern desktop launchers consume 500MB of RAM and take 4 seconds to display a button (*looking at you, Electron apps*), QuickDoom boots in **121 milliseconds**, weighs a tiny **~5MB**, and lets you jump straight into blasting demons with `GZDoom`, `UZDoom`, or `Zandronum` before your coffee even finishes brewing.
+While modern desktop launchers consume 500MB of RAM and take 4 seconds to display a button (*looking at you, Electron apps*), QuickDoom boots in **121 milliseconds**, weighs a tiny **~10MB**, and lets you jump straight into blasting demons with `GZDoom`, `UZDoom`, or `Zandronum` before your coffee even finishes brewing.
 
 ---
 
