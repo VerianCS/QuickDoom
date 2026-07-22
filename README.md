@@ -159,7 +159,7 @@ triggers:
 2.  AOT Tree-Shaking & Symbol Stripping.
 3.  UPX Dynamic Library Compression.
 4.  warp-packer single-executable packaging.
-5.  Automatic publishing of ~5MB single-file binaries to GitHub Releases!
+5.  Automatic publishing of ~10MB single-file binaries to GitHub Releases!
 
   License
 
