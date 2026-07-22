@@ -1,16 +1,8 @@
-# quickdoom
+# QuickdDom
 
-A doom launcher written in blazing fast flutter
+A doom launcher written in flutter.
 
-## Getting Started
+[![Build & Publish Multi-Platform Release](https://github.com/VerianCS/QuickToDoom/actions/workflows/deploy.yml/badge.svg)](https://github.com/VerianCS/QuickToDoom/actions/workflows/deploy.yml)
 
-This project is a starting point for a Flutter application.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/705aefc6-5619-4c4b-9e83-7ae9ff90a39b" />
