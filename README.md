@@ -38,37 +38,30 @@ So I built **QuickDoom**: a native desktop launcher that combines a **modern cyb
 QuickDoom is engineered using **Clean Architecture** and **Riverpod State Management**. It completely decouples OS process execution and file I/O from the Flutter presentation layer.
 
 ```mermaid
-graph TD
-    %% Styling
-    classDef ui fill:#1e1e24,stroke:#e50914,stroke-width:2px,color:#fff;
-    classDef state fill:#2b2d42,stroke:#8d99ae,stroke-width:2px,color:#fff;
-    classDef domain fill:#3a0ca3,stroke:#4cc9f0,stroke-width:2px,color:#fff;
-    classDef sys fill:#101010,stroke:#e50914,stroke-width:2px,color:#fff;
-
-    subgraph "🎨 Presentation Layer (UI & UX)"
-        UI[Custom Titlebar & Main Dashboard] :::ui
-        DragDrop[Drag-and-Drop WAD Manager] :::ui
-        Tray[System Tray Listener & Window Lifecycle] :::ui
+flowchart TD
+    subgraph Presentation["🎨 Presentation Layer (UI and UX)"]
+        UI["Custom Titlebar and Main Dashboard"]
+        DragDrop["Drag-and-Drop WAD Manager"]
+        Tray["System Tray Listener and Window Lifecycle"]
     end
 
-    subgraph "🧠 State Management (Riverpod)"
-        AppController[Game Launch Controller] :::state
-        ProfileState[Active Profile & WAD Priority State] :::state
+    subgraph StateManagement["🧠 State Management (Riverpod)"]
+        AppController["Game Launch Controller"]
+        ProfileState["Active Profile and WAD Priority State"]
     end
 
-    subgraph "⚡ Domain Layer (Pure Business Logic)"
-        CmdBuilder[Launch Command Builder] :::domain
-        OrderSort[WAD Priority Array Sorter] :::domain
+    subgraph Domain["⚡ Domain Layer (Pure Business Logic)"]
+        CmdBuilder["Launch Command Builder"]
+        OrderSort["WAD Priority Array Sorter"]
     end
 
-    subgraph "💻 Data & System Execution Layer"
-        HiveDB[(Hive Local Storage - Profiles & Ports)] :::sys
-        DartIO[dart:io Process.start Engine] :::sys
-        LogStream[stdout / stderr Ring Buffer Stream] :::sys
-        NativePort[Source Port Executable: uzdoom / gzdoom] :::sys
+    subgraph SystemLayer["💻 Data and System Execution Layer"]
+        HiveDB[("Hive Local Storage (Profiles and Ports)")]
+        DartIO["dart:io Process.start Engine"]
+        LogStream["stdout / stderr Ring Buffer Stream"]
+        NativePort["Source Port Executable: uzdoom / gzdoom"]
     end
 
-    %% Flow Connections
     UI --> DragDrop
     DragDrop --> ProfileState
     Tray --> UI
@@ -80,9 +73,19 @@ graph TD
     CmdBuilder --> DartIO
     HiveDB <--> ProfileState
     DartIO --> NativePort
-    NativePort -. Live Output Stream .-> LogStream
+    NativePort -. "Live Output Stream" .-> LogStream
     LogStream --> AppController
 
+    classDef ui fill:#1e1e24,stroke:#e50914,stroke-width:2px,color:#fff;
+    classDef state fill:#2b2d42,stroke:#8d99ae,stroke-width:2px,color:#fff;
+    classDef domain fill:#3a0ca3,stroke:#4cc9f0,stroke-width:2px,color:#fff;
+    classDef sys fill:#101010,stroke:#e50914,stroke-width:2px,color:#fff;
+
+    class UI,DragDrop,Tray ui;
+    class AppController,ProfileState state;
+    class CmdBuilder,OrderSort domain;
+    class HiveDB,DartIO,LogStream,NativePort sys;
+```
 📊 Benchmarks (The Flex Section)
 
 I am obsessed with micro-optimizations. Here is how QuickDoom stacks up against
