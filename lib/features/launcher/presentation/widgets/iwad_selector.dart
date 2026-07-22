@@ -3,44 +3,44 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/services/file_picker_service.dart';
-import '../../../../domain/entities/source_port.dart';
-import '../../../source_ports/presentation/providers/source_port_provider.dart';
+import '../../../../domain/entities/iwad.dart';
+import '../../../iwads/presentation/providers/iwad_provider.dart';
 import '../providers/launch_provider.dart';
 
-class SourcePortSelector extends ConsumerWidget {
-  const SourcePortSelector({super.key});
+class IwadSelector extends ConsumerWidget {
+  const IwadSelector({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final portsAsync = ref.watch(sourcePortListProvider);
-    final selected = ref.watch(launchNotifierProvider.select((s) => s.sourcePort));
+    final iwadsAsync = ref.watch(iwadListProvider);
+    final selected = ref.watch(launchNotifierProvider.select((s) => s.iwad));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Source Port', style: TextStyle(fontWeight: FontWeight.w600)),
+        const Text('IWAD', style: TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
-              child: portsAsync.when(
-                data: (ports) {
-                  final currentValue = selected != null && ports.any((p) => p.id == selected.id)
-                      ? ports.firstWhere((p) => p.id == selected.id)
+              child: iwadsAsync.when(
+                data: (iwads) {
+                  final currentValue = selected != null && iwads.any((i) => i.id == selected.id)
+                      ? iwads.firstWhere((i) => i.id == selected.id)
                       : null;
                   return InputDecorator(
                     decoration: const InputDecoration(
                       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                     ),
                     child: DropdownButtonHideUnderline(
-                      child: DropdownButton<SourcePort>(
+                      child: DropdownButton<Iwad>(
                         value: currentValue,
-                        hint: const Text('Select a saved port...'),
+                        hint: const Text('Select a saved IWAD...'),
                         isExpanded: true,
                         items: [
-                          ...ports.map((p) => DropdownMenuItem(
-                            value: p,
-                            child: Text(p.name, overflow: TextOverflow.ellipsis),
+                          ...iwads.map((i) => DropdownMenuItem(
+                            value: i,
+                            child: Text(i.name, overflow: TextOverflow.ellipsis),
                           )),
                           DropdownMenuItem(
                             value: null,
@@ -54,9 +54,9 @@ class SourcePortSelector extends ConsumerWidget {
                             ),
                           ),
                         ],
-                        onChanged: (port) {
-                          if (port != null) {
-                            ref.read(launchNotifierProvider.notifier).setSourcePort(port);
+                        onChanged: (iwad) {
+                          if (iwad != null) {
+                            ref.read(launchNotifierProvider.notifier).setIwad(iwad);
                           } else {
                             _browseAndAdd(ref);
                           }
@@ -68,14 +68,14 @@ class SourcePortSelector extends ConsumerWidget {
                 loading: () => const TextField(
                   readOnly: true,
                   decoration: InputDecoration(
-                    hintText: 'Loading ports...',
+                    hintText: 'Loading IWADs...',
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   ),
                 ),
                 error: (err, _) => TextField(
                   readOnly: true,
                   decoration: InputDecoration(
-                    hintText: 'Error loading ports',
+                    hintText: 'Error loading IWADs',
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   ),
                 ),
@@ -108,30 +108,29 @@ class SourcePortSelector extends ConsumerWidget {
 
   Future<void> _browseAndAdd(WidgetRef ref) async {
     final path = await FilePickerService().pickFile(
-      allowedExtensions: ['exe', 'AppImage', ''],
-      dialogTitle: 'Select Source Port Executable',
+      allowedExtensions: ['wad'],
+      dialogTitle: 'Select IWAD File',
     );
     if (path == null) return;
 
     final name = path.split('\\').last.split('/').last;
-    final port = SourcePort(
+    final iwad = Iwad(
       id: const Uuid().v4(),
       name: name,
-      executablePath: path,
+      path: path,
     );
-    await ref.read(sourcePortListProvider.notifier).save(port);
-    ref.read(launchNotifierProvider.notifier).setSourcePort(port);
+    await ref.read(iwadListProvider.notifier).save(iwad);
+    ref.read(launchNotifierProvider.notifier).setIwad(iwad);
   }
 
-  void _showEditDialog(BuildContext context, WidgetRef ref, SourcePort port) {
-    final nameCtrl = TextEditingController(text: port.name);
-    final pathCtrl = TextEditingController(text: port.executablePath);
-    final argsCtrl = TextEditingController(text: port.defaultArgs);
+  void _showEditDialog(BuildContext context, WidgetRef ref, Iwad iwad) {
+    final nameCtrl = TextEditingController(text: iwad.name);
+    final pathCtrl = TextEditingController(text: iwad.path);
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Edit Source Port'),
+        title: const Text('Edit IWAD'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -144,23 +143,18 @@ class SourcePortSelector extends ConsumerWidget {
               controller: pathCtrl,
               readOnly: true,
               decoration: InputDecoration(
-                labelText: 'Executable Path',
+                labelText: 'File Path',
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.folder_open, size: 18),
                   onPressed: () async {
                     final p = await FilePickerService().pickFile(
-                      allowedExtensions: ['exe', 'AppImage', ''],
-                      dialogTitle: 'Select Source Port Executable',
+                      allowedExtensions: ['wad'],
+                      dialogTitle: 'Select IWAD File',
                     );
                     if (p != null) pathCtrl.text = p;
                   },
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: argsCtrl,
-              decoration: const InputDecoration(labelText: 'Default Args'),
             ),
           ],
         ),
@@ -171,13 +165,12 @@ class SourcePortSelector extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () async {
-              final updated = port.copyWith(
+              final updated = iwad.copyWith(
                 name: nameCtrl.text.trim(),
-                executablePath: pathCtrl.text.trim(),
-                defaultArgs: argsCtrl.text.trim(),
+                path: pathCtrl.text.trim(),
               );
-              await ref.read(sourcePortListProvider.notifier).save(updated);
-              ref.read(launchNotifierProvider.notifier).setSourcePort(updated);
+              await ref.read(iwadListProvider.notifier).save(updated);
+              ref.read(launchNotifierProvider.notifier).setIwad(updated);
               if (ctx.mounted) Navigator.of(ctx).pop();
             },
             child: const Text('Save'),
@@ -187,12 +180,12 @@ class SourcePortSelector extends ConsumerWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref, SourcePort port) {
+  void _confirmDelete(BuildContext context, WidgetRef ref, Iwad iwad) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Source Port'),
-        content: Text('Delete "${port.name}"?'),
+        title: const Text('Delete IWAD'),
+        content: Text('Delete "${iwad.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -200,8 +193,8 @@ class SourcePortSelector extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () async {
-              await ref.read(sourcePortListProvider.notifier).delete(port.id);
-              ref.read(launchNotifierProvider.notifier).clearSourcePort();
+              await ref.read(iwadListProvider.notifier).delete(iwad.id);
+              ref.read(launchNotifierProvider.notifier).clearIwad();
               if (ctx.mounted) Navigator.of(ctx).pop();
             },
             child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),

@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../../../core/services/process_service.dart';
 import '../../../../data/repositories/process_launcher_impl.dart';
@@ -8,6 +9,7 @@ import '../../../../domain/entities/pwad.dart';
 import '../../../../domain/entities/source_port.dart';
 import '../../../../domain/interfaces/i_process_launcher.dart';
 import '../../../../domain/usecases/build_launch_command.dart';
+import 'process_provider.dart';
 
 part 'launch_provider.g.dart';
 
@@ -131,7 +133,22 @@ class LaunchNotifier extends _$LaunchNotifier {
         iwad: state.iwad!,
       );
 
-      await launcher.launch(state.sourcePort!.executablePath, args);
+      final result = await launcher.launch(state.sourcePort!.executablePath, args);
+
+      final runningProcess = RunningProcess(
+        result: result,
+        executable: state.sourcePort!.executablePath,
+        args: args,
+      );
+      ref.read(processManagerProvider.notifier).track(runningProcess);
+
+      await windowManager.hide();
+
+      result.exitCode.then((code) async {
+        ref.read(processManagerProvider.notifier).clear();
+        await windowManager.show();
+        await windowManager.focus();
+      });
 
       state = state.copyWith(isLaunching: false, launchSuccess: true);
     } catch (e) {

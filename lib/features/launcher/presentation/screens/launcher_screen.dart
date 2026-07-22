@@ -9,66 +9,130 @@ import '../../../../data/repositories/profile_repository_impl.dart';
 import '../../../../data/repositories/source_port_repository_impl.dart';
 import '../../../../domain/entities/iwad.dart';
 import '../../../../domain/entities/pwad.dart';
+import '../../../../domain/entities/source_port.dart';
+import '../../../console/presentation/widgets/console_panel.dart';
 import '../../../profiles/presentation/providers/profile_provider.dart';
 import '../../../profiles/presentation/widgets/profile_list_sidebar.dart';
 import '../../../wads/presentation/widgets/wad_drop_zone.dart';
 import '../providers/launch_provider.dart';
+import '../widgets/iwad_selector.dart';
 import '../widgets/launch_button.dart';
 import '../widgets/source_port_dropdown.dart';
 
-class LauncherScreen extends ConsumerWidget {
+class LauncherScreen extends ConsumerStatefulWidget {
   const LauncherScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LauncherScreen> createState() => _LauncherScreenState();
+}
+
+class _LauncherScreenState extends ConsumerState<LauncherScreen> {
+  Future<void> _loadProfile(WidgetRef ref, String profileId) async {
+    final profileRepo = ProfileRepositoryImpl(HiveService());
+    final profile = await profileRepo.getProfile(profileId);
+    if (profile == null) return;
+
+    final SourcePort? port;
+    if (profile.sourcePortId.isNotEmpty) {
+      final portRepo = SourcePortRepositoryImpl(HiveService());
+      final ports = await portRepo.getPorts();
+      port = ports.cast<SourcePort?>().firstWhere(
+        (p) => p!.id == profile.sourcePortId,
+        orElse: () => null,
+      );
+    } else {
+      port = null;
+    }
+
+    final Iwad? iwad;
+    if (profile.iwadId.isNotEmpty) {
+      final iwadRepo = IwadRepositoryImpl(HiveService());
+      final iwads = await iwadRepo.getIwads();
+      iwad = iwads.cast<Iwad?>().firstWhere(
+        (i) => i!.id == profile.iwadId,
+        orElse: () => null,
+      );
+    } else {
+      iwad = null;
+    }
+
+    ref.read(launchNotifierProvider.notifier).loadFromProfile(
+      profile: profile,
+      port: port,
+      iwad: iwad,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(currentProfileIdProvider, (prev, next) {
+      if (next != null && next != prev) {
+        _loadProfile(ref, next);
+      }
+    });
+
     final state = ref.watch(launchNotifierProvider);
     final currentProfileId = ref.watch(currentProfileIdProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('QuickDoom'),
-        centerTitle: false,
-        actions: [
-          if (currentProfileId != null)
-            TextButton.icon(
-              onPressed: () => _saveToProfile(ref),
-              icon: const Icon(Icons.save, size: 18),
-              label: const Text('Save'),
-            ),
-        ],
-      ),
-      body: Row(
+      body: Column(
         children: [
-          const ProfileListSidebar(),
           Expanded(
-            child: WadDropZone(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: ListView(
+            child: Row(
+              children: [
+                const ProfileListSidebar(),
+                Expanded(
+                  child: WadDropZone(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SourcePortSelector(),
-                          const SizedBox(height: 24),
-                          _IwadSelector(),
-                          const SizedBox(height: 24),
-                          _PwadSection(),
-                          if (state.error != null) ...[
-                            const SizedBox(height: 16),
-                            _ErrorBanner(message: state.error!),
-                          ],
+                          Row(
+                            children: [
+                              const Text(
+                                'Launch Configuration',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              if (currentProfileId != null)
+                                TextButton.icon(
+                                  onPressed: () => _saveToProfile(ref),
+                                  icon: const Icon(Icons.save, size: 18),
+                                  label: const Text('Save'),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          Expanded(
+                            child: ListView(
+                              children: [
+                                const SourcePortSelector(),
+                                const SizedBox(height: 20),
+                                const IwadSelector(),
+                                const SizedBox(height: 20),
+                                _PwadSection(),
+                                if (state.error != null) ...[
+                                  const SizedBox(height: 16),
+                                  _ErrorBanner(message: state.error!),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const LaunchButton(),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    const LaunchButton(),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
+          const ConsolePanel(),
         ],
       ),
     );
@@ -100,68 +164,6 @@ class LauncherScreen extends ConsumerWidget {
     await profileRepo.saveProfile(updated);
 
     ref.invalidate(profileListProvider);
-  }
-}
-
-class _IwadSelector extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final iwad = ref.watch(launchNotifierProvider.select((s) => s.iwad));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('IWAD', style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                readOnly: true,
-                decoration: InputDecoration(
-                  hintText: 'Select IWAD file (.wad)...',
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 14,
-                  ),
-                  suffixIcon: iwad != null
-                      ? IconButton(
-                          icon: const Icon(Icons.close, size: 18),
-                          onPressed: () => ref
-                              .read(launchNotifierProvider.notifier)
-                              .clearIwad(),
-                        )
-                      : null,
-                ),
-                controller: TextEditingController(
-                  text: iwad != null
-                      ? '${iwad.name} (${iwad.path})'
-                      : '',
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.tonalIcon(
-              onPressed: () async {
-                final path = await _pickIwadFile();
-                if (path != null) {
-                  final name = path.split('\\').last.split('/').last;
-                  ref.read(launchNotifierProvider.notifier).setIwad(
-                    Iwad(
-                      id: const Uuid().v4(),
-                      name: name,
-                      path: path,
-                    ),
-                  );
-                }
-              },
-              icon: const Icon(Icons.folder_open, size: 18),
-              label: const Text('Browse'),
-            ),
-          ],
-        ),
-      ],
-    );
   }
 }
 
@@ -347,14 +349,6 @@ class _ErrorBanner extends StatelessWidget {
       ),
     );
   }
-}
-
-Future<String?> _pickIwadFile() async {
-  final service = FilePickerService();
-  return service.pickFile(
-    allowedExtensions: ['wad'],
-    dialogTitle: 'Select IWAD File',
-  );
 }
 
 Future<List<String>> _pickPwadFiles() async {

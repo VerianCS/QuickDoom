@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -9,9 +11,12 @@ import 'package:quickdoom/data/models/launch_profile_model.dart';
 import 'package:quickdoom/data/models/pwad_model.dart';
 import 'package:quickdoom/data/models/source_port_model.dart';
 
+final _tempDir = Directory('test/temp_${DateTime.now().millisecondsSinceEpoch}');
+
 void main() {
   setUp(() async {
-    Hive.init('test/temp');
+    _tempDir.createSync();
+    Hive.init(_tempDir.path);
     Hive.registerAdapter(SourcePortModelAdapter());
     Hive.registerAdapter(IwadModelAdapter());
     Hive.registerAdapter(PwadModelAdapter());
@@ -20,11 +25,8 @@ void main() {
   });
 
   tearDown(() async {
-    await Hive.deleteBoxFromDisk('quickdoom');
-    await Hive.deleteBoxFromDisk('profiles');
-    await Hive.deleteBoxFromDisk('ports');
-    await Hive.deleteBoxFromDisk('iwads');
-    await Hive.deleteFromDisk();
+    await Hive.close();
+    await _tempDir.delete(recursive: true);
   });
 
   testWidgets('QuickDoom app renders launcher screen',

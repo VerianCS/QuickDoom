@@ -36,7 +36,7 @@ class ProcessService {
         .listen((data) => logController.add('[STDERR] $data'));
 
     return ProcessStreamResult(
-      outputLogs: logController.stream,
+      outputLogs: logController.stream.asBroadcastStream(),
       exitCode: process.exitCode,
     );
   }
