@@ -3,8 +3,8 @@
 ---
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Boot_Time-121ms_(Debug)_%2F_<20ms_(Release)-brightgreen?style=for-the-badge&logo=speedtest" alt="Boot Time">
-  <img src="https://img.shields.io/badge/Executable_Size-~5MB_Standalone-crimson?style=for-the-badge&logo=flutter" alt="App Size">
+  <img src="https://img.shields.io/badge/Boot_Time-221ms_(Debug)_%2F_<120ms_(Release)-brightgreen?style=for-the-badge&logo=speedtest" alt="Boot Time">
+  <img src="https://img.shields.io/badge/Executable_Size-~10MB_Standalone-crimson?style=for-the-badge&logo=flutter" alt="App Size">
   <img src="https://img.shields.io/badge/RAM_Usage-Microscopic-blueviolet?style=for-the-badge&logo=ram" alt="RAM Usage">
   <img src="https://img.shields.io/badge/Electron_Bloat-0%25-red?style=for-the-badge&logo=prohibit" alt="No Electron">
 </p>
