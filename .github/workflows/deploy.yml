@@ -94,8 +94,8 @@ jobs:
         if: matrix.target == 'Windows'
         shell: pwsh
         run: |
-          upx --best --ultra-brute ${{ matrix.build_dir }}/*.dll || true
-          upx --best --ultra-brute ${{ matrix.build_dir }}/${{ matrix.exec_name }} || true
+          # Only run mild UPX on the main exe, skip flutter_engine.dll
+          upx --best ${{ matrix.build_dir }}/${{ matrix.exec_name }} || true
 
       - name: Compress Binaries with UPX (Linux)
         if: matrix.target == 'Linux'
