@@ -356,7 +356,7 @@ class _ErrorBanner extends StatelessWidget {
 Future<List<String>> _pickPwadFiles() async {
   final service = FilePickerService();
   return service.pickMultipleFiles(
-    allowedExtensions: ['wad', 'pk3', 'pk7', 'ipk3', 'ipk7', 'deh', 'bex'],
+    allowedExtensions: ['wad', 'pk3', 'pk7', 'ipk3', 'ipk7', 'deh', 'bex', 'zip'],
     dialogTitle: 'Select Mod Files',
   );
 }

@@ -21,7 +21,7 @@ class WadDropZone extends ConsumerWidget {
         final pwads = <Pwad>[];
         for (final file in details.files) {
           final path = file.path;
-          if (FileExtensions.isWadFile(path)) {
+          if (FileExtensions.pwadExtensions.any((ext) => path.toLowerCase().endsWith(ext))) {
             pwads.add(Pwad(
               id: const Uuid().v4(),
               path: path,
