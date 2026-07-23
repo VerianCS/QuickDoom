@@ -42,6 +42,6 @@ void main() {
     expect(find.text('Source Port'), findsOneWidget);
     expect(find.text('IWAD'), findsOneWidget);
     expect(find.text('PWADs / Mods'), findsOneWidget);
-    expect(find.text('Launch'), findsOneWidget);
+    expect(find.text('Launch'), findsNWidgets(2));
   });
 }

@@ -1,14 +1,14 @@
 import 'package:go_router/go_router.dart';
 
-import '../../features/launcher/presentation/screens/launcher_screen.dart';
+import '../../features/main/presentation/screens/main_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
   routes: [
     GoRoute(
       path: '/',
-      name: 'launcher',
-      builder: (context, state) => const LauncherScreen(),
+      name: 'main',
+      builder: (context, state) => const MainScreen(),
     ),
   ],
 );
