@@ -121,10 +121,6 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
       }
     } catch (_) {}
 
-    try {
-      await ref.read(profileListProvider.notifier).ensureLoaded();
-    } catch (_) {}
-
     _bootStopwatch.stop();
     debugPrint('⚡ Bootstrap ready: ${_bootStopwatch.elapsedMilliseconds} ms');
 

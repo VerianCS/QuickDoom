@@ -291,7 +291,9 @@ class _PwadSection extends ConsumerWidget {
                 }
               },
               icon: const Icon(Icons.add, size: 18),
+
               label: const Text('Add WAD Files'),
+
             ),
             const SizedBox(width: 8),
             Icon(
