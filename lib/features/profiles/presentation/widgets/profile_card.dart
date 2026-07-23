@@ -73,6 +73,15 @@ class ProfileCard extends ConsumerWidget {
                 ),
               ),
               const PopupMenuItem(
+                value: 'duplicate',
+                child: ListTile(
+                  leading: Icon(Icons.copy_outlined, size: 18),
+                  title: Text('Duplicate'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
                 value: 'delete',
                 child: ListTile(
                   leading: Icon(Icons.delete_outline, size: 18),
@@ -103,6 +112,7 @@ class ProfileCard extends ConsumerWidget {
 
   void _handleMenuAction(BuildContext context, WidgetRef ref, String action) {
     if (action == 'rename') _showRenameDialog(context, ref);
+    if (action == 'duplicate') _duplicateProfile(ref);
     if (action == 'delete') _confirmDelete(context, ref);
   }
 
@@ -123,6 +133,15 @@ class ProfileCard extends ConsumerWidget {
           ),
         ),
         const PopupMenuItem(
+          value: 'duplicate',
+          child: ListTile(
+            leading: Icon(Icons.copy_outlined, size: 18),
+            title: Text('Duplicate'),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const PopupMenuItem(
           value: 'delete',
           child: ListTile(
             leading: Icon(Icons.delete_outline, size: 18),
@@ -135,6 +154,10 @@ class ProfileCard extends ConsumerWidget {
     ).then((value) {
       if (value != null && context.mounted) _handleMenuAction(context, ref, value);
     });
+  }
+
+  void _duplicateProfile(WidgetRef ref) {
+    ref.read(profileListProvider.notifier).duplicate(profile.id);
   }
 
   void _showRenameDialog(BuildContext context, WidgetRef ref) {

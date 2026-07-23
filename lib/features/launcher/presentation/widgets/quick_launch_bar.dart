@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 
 class QuickLaunchBar extends StatelessWidget {
+  final bool canLaunch;
+  final bool isLaunching;
   final VoidCallback onLaunch;
 
-  const QuickLaunchBar({super.key, required this.onLaunch});
+  const QuickLaunchBar({
+    super.key,
+    required this.canLaunch,
+    required this.isLaunching,
+    required this.onLaunch,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +41,17 @@ class QuickLaunchBar extends StatelessWidget {
           ),
           const Spacer(),
           FilledButton(
-            onPressed: onLaunch,
-            child: const Text('Launch'),
+            onPressed: canLaunch && !isLaunching ? onLaunch : null,
+            child: isLaunching
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Launch'),
           ),
         ],
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -16,7 +17,7 @@ import '../../../profiles/presentation/widgets/profile_list_sidebar.dart';
 import '../../../wads/presentation/widgets/wad_drop_zone.dart';
 import '../providers/launch_provider.dart';
 import '../widgets/iwad_selector.dart';
-import '../widgets/launch_button.dart';
+import '../widgets/quick_launch_bar.dart';
 import '../widgets/source_port_dropdown.dart';
 
 class LauncherScreen extends ConsumerStatefulWidget {
@@ -75,65 +76,85 @@ class _LauncherScreenState extends ConsumerState<LauncherScreen> {
     final currentProfileId = ref.watch(currentProfileIdProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                const ProfileListSidebar(),
-                Expanded(
-                  child: WadDropZone(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+      body: Focus(
+        autofocus: true,
+        child: CallbackShortcuts(
+          bindings: {
+            SingleActivator(LogicalKeyboardKey.keyL, control: true): () {
+              if (state.canLaunch && !state.isLaunching) {
+                ref.read(launchNotifierProvider.notifier).launch();
+              }
+            },
+            SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
+              if (currentProfileId != null) _saveToProfile(ref);
+            },
+          },
+          child: Column(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    const ProfileListSidebar(),
+                    Expanded(
+                      child: WadDropZone(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Launch Configuration',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Launch Configuration',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  if (currentProfileId != null)
+                                    TextButton.icon(
+                                      onPressed: () => _saveToProfile(ref),
+                                      icon: const Icon(Icons.save, size: 18),
+                                      label: const Text('Save'),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              Expanded(
+                                child: ListView(
+                                  children: [
+                                    const SourcePortSelector(),
+                                    const SizedBox(height: 20),
+                                    const IwadSelector(),
+                                    const SizedBox(height: 20),
+                                    _CustomArgsField(),
+                                    const SizedBox(height: 20),
+                                    _PwadSection(),
+                                    if (state.error != null) ...[
+                                      const SizedBox(height: 16),
+                                      _ErrorBanner(message: state.error!),
+                                    ],
+                                  ],
                                 ),
                               ),
-                              const Spacer(),
-                              if (currentProfileId != null)
-                                TextButton.icon(
-                                  onPressed: () => _saveToProfile(ref),
-                                  icon: const Icon(Icons.save, size: 18),
-                                  label: const Text('Save'),
-                                ),
                             ],
                           ),
-                          const SizedBox(height: 20),
-                          Expanded(
-                            child: ListView(
-                              children: [
-                                const SourcePortSelector(),
-                                const SizedBox(height: 20),
-                                const IwadSelector(),
-                                const SizedBox(height: 20),
-                                _PwadSection(),
-                                if (state.error != null) ...[
-                                  const SizedBox(height: 16),
-                                  _ErrorBanner(message: state.error!),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const LaunchButton(),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              QuickLaunchBar(
+                canLaunch: state.canLaunch,
+                isLaunching: state.isLaunching,
+                onLaunch: () => ref.read(launchNotifierProvider.notifier).launch(),
+              ),
+              const ConsolePanel(),
+            ],
           ),
-          const ConsolePanel(),
-        ],
+        ),
       ),
     );
   }
@@ -160,6 +181,7 @@ class _LauncherScreenState extends ConsumerState<LauncherScreen> {
       sourcePortId: state.sourcePort?.id ?? existing.sourcePortId,
       iwadId: state.iwad?.id ?? existing.iwadId,
       pwadList: state.pwads,
+      customArgs: state.customArgs,
     );
     await profileRepo.saveProfile(updated);
 
@@ -312,6 +334,62 @@ class _PwadSection extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _CustomArgsField extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_CustomArgsField> createState() => _CustomArgsFieldState();
+}
+
+class _CustomArgsFieldState extends ConsumerState<_CustomArgsField> {
+  final _controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.text = ref.read(launchNotifierProvider.select((s) => s.customArgs));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(launchNotifierProvider.select((s) => s.customArgs), (prev, next) {
+      if (_controller.text != next) {
+        _controller.text = next;
+        _controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: next.length),
+        );
+      }
+    });
+
+    final customArgs = ref.watch(launchNotifierProvider.select((s) => s.customArgs));
+
+    return TextField(
+      controller: _controller,
+      onChanged: (value) => ref.read(launchNotifierProvider.notifier).setCustomArgs(value),
+      decoration: InputDecoration(
+        labelText: 'Custom Arguments',
+        hintText: '-skill 4 -fast -nomonsters',
+        border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        isDense: true,
+        suffixIcon: customArgs.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 16),
+                onPressed: () {
+                  ref.read(launchNotifierProvider.notifier).setCustomArgs('');
+                  _controller.clear();
+                },
+              )
+            : null,
+      ),
     );
   }
 }

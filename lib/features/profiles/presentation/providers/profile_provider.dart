@@ -33,6 +33,17 @@ class ProfileList extends _$ProfileList {
     ref.invalidateSelf();
   }
 
+  Future<void> duplicate(String id) async {
+    final profiles = await _repo().getProfiles();
+    final original = profiles.firstWhere((p) => p.id == id);
+    final copy = original.copyWith(
+      id: const Uuid().v4(),
+      name: '${original.name} (copy)',
+    );
+    await _repo().saveProfile(copy);
+    ref.invalidateSelf();
+  }
+
   Future<void> delete(String id) async {
     await _repo().deleteProfile(id);
     final currentId = ref.read(currentProfileIdProvider);

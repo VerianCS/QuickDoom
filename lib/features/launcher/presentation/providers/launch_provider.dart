@@ -17,6 +17,7 @@ class LaunchState {
   final SourcePort? sourcePort;
   final Iwad? iwad;
   final List<Pwad> pwads;
+  final String customArgs;
   final bool isLaunching;
   final String? error;
   final bool launchSuccess;
@@ -25,6 +26,7 @@ class LaunchState {
     this.sourcePort,
     this.iwad,
     this.pwads = const [],
+    this.customArgs = '',
     this.isLaunching = false,
     this.error,
     this.launchSuccess = false,
@@ -34,6 +36,7 @@ class LaunchState {
     SourcePort? sourcePort,
     Iwad? iwad,
     List<Pwad>? pwads,
+    String? customArgs,
     bool? isLaunching,
     String? error,
     bool? launchSuccess,
@@ -43,6 +46,7 @@ class LaunchState {
       sourcePort: sourcePort ?? this.sourcePort,
       iwad: iwad ?? this.iwad,
       pwads: pwads ?? this.pwads,
+      customArgs: customArgs ?? this.customArgs,
       isLaunching: isLaunching ?? this.isLaunching,
       error: clearError ? null : error ?? this.error,
       launchSuccess: launchSuccess ?? this.launchSuccess,
@@ -101,6 +105,10 @@ class LaunchNotifier extends _$LaunchNotifier {
     state = state.copyWith(pwads: reindexed);
   }
 
+  void setCustomArgs(String args) {
+    state = state.copyWith(customArgs: args);
+  }
+
   void togglePwad(String id) {
     state = state.copyWith(
       pwads: state.pwads.map((p) {
@@ -125,6 +133,7 @@ class LaunchNotifier extends _$LaunchNotifier {
         sourcePortId: state.sourcePort!.id,
         iwadId: state.iwad!.id,
         pwadList: state.pwads,
+        customArgs: state.customArgs,
       );
 
       final args = commandBuilder.buildArgs(
@@ -168,6 +177,7 @@ class LaunchNotifier extends _$LaunchNotifier {
       sourcePort: port,
       iwad: iwad,
       pwads: profile.pwadList,
+      customArgs: profile.customArgs,
     );
   }
 
