@@ -2,29 +2,21 @@
 [![Build & Publish Multi-Platform Release](https://github.com/VerianCS/QuickToDoom/actions/workflows/deploy.yml/badge.svg)](https://github.com/VerianCS/QuickToDoom/actions/workflows/deploy.yml)
 ---
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Boot_Time-221ms_(Debug)_%2F_<120ms_(Release)-brightgreen?style=for-the-badge&logo=speedtest" alt="Boot Time">
-  <img src="https://img.shields.io/badge/Executable_Size-~10MB_Standalone-crimson?style=for-the-badge&logo=flutter" alt="App Size">
-  <img src="https://img.shields.io/badge/RAM_Usage-Microscopic-blueviolet?style=for-the-badge&logo=ram" alt="RAM Usage">
-  <img src="https://img.shields.io/badge/Electron_Bloat-0%25-red?style=for-the-badge&logo=prohibit" alt="No Electron">
-</p>
 
 <img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/00ae7dae-cc87-4b7f-86d1-949ec12608b5" />
 
 
-> **"Rip and tear... until the boot time is ZERO."**
+**QuickDoom** is a , modern, cross-platform Doom source port & mod launcher built with Flutter Desktop. 
 
-**QuickDoom** is a blazingly fast, modern, cross-platform Doom source port & mod launcher built with Flutter Desktop. 
-
-While modern desktop launchers consume 500MB of RAM and take 4 seconds to display a button (*looking at you, Electron apps*), QuickDoom boots in **121 milliseconds**, weighs a tiny **~10MB**, and lets you jump straight into blasting demons with `GZDoom`, `UZDoom`, or `Zandronum` before your coffee even finishes brewing.
+While modern desktop launchers consume 500MB of RAM and take 4 seconds to display a button (*looking at you, Electron apps*), QuickDoom boots in **121 milliseconds**, weighs **~10MB**, and lets you jump straight into blasting demons.
 
 ---
 
 ##  Why Does This Exist?
 
-Look, classic launchers like ZDL were legendary back in 2006, but their UIs look like they were designed during the Bronze Age. On the flip side, modern web-wrapper launchers eat more RAM than Chrome with 50 tabs open.
+Look, classic launchers like ZDL were legendary back in 2006. On the flip side, modern web-wrapper launchers eat more RAM than Chrome with 50 tabs open.
 
-So I built **QuickDoom**: a native desktop launcher that combines a **modern cyberpunk UI** with **insane low-level performance**.
+So I built **QuickDoom**: a native desktop launcher that combines a **modern UI** with **insane low-level performance**.
 
 ###   Highlights
 *  **Instant Boot:** Deferred font/asset parsing drops cold-start to **121ms** (debug) and **<20ms** (release).
@@ -89,7 +81,7 @@ flowchart TD
     class CmdBuilder,OrderSort domain;
     class HiveDB,DartIO,LogStream,NativePort sys;
 ```
-📊 Benchmarks (The Flex Section)
+📊 Benchmarks
 
 I am obsessed with micro-optimizations. Here is how QuickDoom stacks up against
 typical desktop apps:
@@ -99,7 +91,6 @@ typical desktop apps:
 | **Cold Boot Time**     | \~2,500 ms             | \~400 ms               | **221 ms (Debug) / \<120 ms (Release)** |
 | **Executable Size**    | \~150 MB               | \~35 MB                | **\~10.5 MB (UPX + Warp Packed)**       |
 | **RAM Footprint**      | \~350 MB               | \~80 MB                | **\~35 MB**                            |
-| **Demons Slaughtered** | 0                      | 0                      | **Infinite**                           |
 
 How I Achieved a 121ms Boot:
 
@@ -159,7 +150,7 @@ triggers:
 2.  AOT Tree-Shaking & Symbol Stripping.
 3.  UPX Dynamic Library Compression.
 4.  warp-packer single-executable packaging.
-5.  Automatic publishing of ~10MB single-file binaries to GitHub Releases!
+5.  Automatic publishing binaries to GitHub Releases.
 
   License
 
