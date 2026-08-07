@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
+import '../http/browser_client.dart';
 
 class IdgamesFileResult {
   final int id;
@@ -74,7 +74,9 @@ class IdgamesApiService {
       'out': 'json',
     });
 
-    final response = await http.get(uri);
+    final client = BrowserClient();
+    final response = await client.get(uri);
+    client.close();
     if (response.statusCode != 200) return [];
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -107,7 +109,9 @@ class IdgamesApiService {
       'out': 'json',
     });
 
-    final response = await http.get(uri);
+    final client = BrowserClient();
+    final response = await client.get(uri);
+    client.close();
     if (response.statusCode != 200) return null;
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;

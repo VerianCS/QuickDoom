@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../http/browser_client.dart';
+
 class DownloadProgress {
   final int receivedBytes;
   final int totalBytes;
@@ -14,7 +16,7 @@ class DownloadProgress {
 
 class DownloadService {
   Stream<DownloadProgress> download(String url, String destPath) async* {
-    final client = http.Client();
+    final client = BrowserClient();
     try {
       final request = http.Request('GET', Uri.parse(url));
       final response = await client.send(request);

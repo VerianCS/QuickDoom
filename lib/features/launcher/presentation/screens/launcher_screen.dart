@@ -11,7 +11,6 @@ import '../../../../data/repositories/source_port_repository_impl.dart';
 import '../../../../domain/entities/iwad.dart';
 import '../../../../domain/entities/pwad.dart';
 import '../../../../domain/entities/source_port.dart';
-import '../../../console/presentation/widgets/console_panel.dart';
 import '../../../profiles/presentation/providers/profile_provider.dart';
 import '../../../profiles/presentation/widgets/profile_list_sidebar.dart';
 import '../../../wads/presentation/widgets/wad_drop_zone.dart';
@@ -75,85 +74,82 @@ class _LauncherScreenState extends ConsumerState<LauncherScreen> {
     final state = ref.watch(launchNotifierProvider);
     final currentProfileId = ref.watch(currentProfileIdProvider);
 
-    return Scaffold(
-      body: Focus(
-        autofocus: true,
-        child: CallbackShortcuts(
-          bindings: {
-            SingleActivator(LogicalKeyboardKey.keyL, control: true): () {
-              if (state.canLaunch && !state.isLaunching) {
-                ref.read(launchNotifierProvider.notifier).launch();
-              }
-            },
-            SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
-              if (currentProfileId != null) _saveToProfile(ref);
-            },
+    return Focus(
+      autofocus: true,
+      child: CallbackShortcuts(
+        bindings: {
+          SingleActivator(LogicalKeyboardKey.keyL, control: true): () {
+            if (state.canLaunch && !state.isLaunching) {
+              ref.read(launchNotifierProvider.notifier).launch();
+            }
           },
-          child: Column(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    const ProfileListSidebar(),
-                    Expanded(
-                      child: WadDropZone(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Text(
-                                    'Launch Configuration',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+          SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
+            if (currentProfileId != null) _saveToProfile(ref);
+          },
+        },
+        child: Column(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  const ProfileListSidebar(),
+                  Expanded(
+                    child: WadDropZone(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text(
+                                  'Launch Configuration',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  const Spacer(),
-                                  if (currentProfileId != null)
-                                    TextButton.icon(
-                                      onPressed: () => _saveToProfile(ref),
-                                      icon: const Icon(Icons.save, size: 18),
-                                      label: const Text('Save'),
-                                    ),
+                                ),
+                                const Spacer(),
+                                if (currentProfileId != null)
+                                  TextButton.icon(
+                                    onPressed: () => _saveToProfile(ref),
+                                    icon: const Icon(Icons.save, size: 18),
+                                    label: const Text('Save'),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            Expanded(
+                              child: ListView(
+                                children: [
+                                  const SourcePortSelector(),
+                                  const SizedBox(height: 20),
+                                  const IwadSelector(),
+                                  const SizedBox(height: 20),
+                                  _CustomArgsField(),
+                                  const SizedBox(height: 20),
+                                  _PwadSection(),
+                                  if (state.error != null) ...[
+                                    const SizedBox(height: 16),
+                                    _ErrorBanner(message: state.error!),
+                                  ],
                                 ],
                               ),
-                              const SizedBox(height: 20),
-                              Expanded(
-                                child: ListView(
-                                  children: [
-                                    const SourcePortSelector(),
-                                    const SizedBox(height: 20),
-                                    const IwadSelector(),
-                                    const SizedBox(height: 20),
-                                    _CustomArgsField(),
-                                    const SizedBox(height: 20),
-                                    _PwadSection(),
-                                    if (state.error != null) ...[
-                                      const SizedBox(height: 16),
-                                      _ErrorBanner(message: state.error!),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              QuickLaunchBar(
-                canLaunch: state.canLaunch,
-                isLaunching: state.isLaunching,
-                onLaunch: () => ref.read(launchNotifierProvider.notifier).launch(),
-              ),
-              const ConsolePanel(),
-            ],
-          ),
+            ),
+            QuickLaunchBar(
+              canLaunch: state.canLaunch,
+              isLaunching: state.isLaunching,
+              onLaunch: () => ref.read(launchNotifierProvider.notifier).launch(),
+            ),
+          ],
         ),
       ),
     );
