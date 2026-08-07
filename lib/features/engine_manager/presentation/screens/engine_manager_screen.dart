@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/engine_source.dart';
 import '../../domain/entities/engine_release.dart';
-import '../providers/engine_download_provider.dart';
 import '../providers/engine_list_provider.dart';
 import '../providers/engine_releases_provider.dart';
 
@@ -13,7 +12,6 @@ class EngineManagerScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final engines = ref.watch(engineListProvider);
-    final downloadState = ref.watch(engineDownloadProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -29,24 +27,6 @@ class EngineManagerScreen extends ConsumerWidget {
             itemBuilder: (context, index) => _EngineSourceCard(engine: engines[index]),
           ),
         ),
-        if (downloadState.isDownloading)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: LinearProgressIndicator(value: downloadState.progress, minHeight: 4),
-                ),
-                const SizedBox(width: 8),
-                Text('${(downloadState.progress * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12)),
-              ],
-            ),
-          ),
-        if (downloadState.error != null)
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(downloadState.error!, style: const TextStyle(color: Colors.red, fontSize: 12)),
-          ),
       ],
     );
   }
@@ -102,8 +82,6 @@ class _ReleaseCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final downloadState = ref.watch(engineDownloadProvider);
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Container(
@@ -139,15 +117,21 @@ class _ReleaseCard extends ConsumerWidget {
               ),
             ...release.assetsForPlatform('windows').map((asset) => ListTile(
               dense: true,
-              leading: const Icon(Icons.file_download_outlined, size: 18),
+              leading: Icon(Icons.file_download_outlined, size: 18, color: Theme.of(context).colorScheme.onSurface.withAlpha(100)),
               title: Text(asset.name, style: const TextStyle(fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
-              trailing: Text(asset.sizeFormatted, style: const TextStyle(fontSize: 11)),
-              onTap: downloadState.isDownloading
-                  ? null
-                  : () => ref.read(engineDownloadProvider.notifier).download(
-                        asset.downloadUrl,
-                        asset.name,
-                      ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(asset.sizeFormatted, style: const TextStyle(fontSize: 11)),
+                  const SizedBox(width: 8),
+                  Chip(
+                    label: const Text('Soon', style: TextStyle(fontSize: 10)),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ],
+              ),
             )),
             if (release.assetsForPlatform('windows').isEmpty)
               const Padding(

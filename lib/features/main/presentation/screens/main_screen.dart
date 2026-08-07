@@ -6,8 +6,9 @@ import '../../../launcher/presentation/screens/launcher_screen.dart';
 import '../../../mod_browser/presentation/screens/mod_browser_screen.dart';
 import '../../../engine_manager/presentation/screens/engine_manager_screen.dart';
 import '../../../mod_packs/presentation/screens/mod_pack_list_screen.dart';
+import '../../../map_viewer/presentation/screens/map_viewer_screen.dart';
 
-enum AppTab { launcher, modBrowser, engines, modPacks }
+enum AppTab { launcher, modBrowser, engines, modPacks, mapViewer }
 
 final currentTabProvider = StateProvider<AppTab>((ref) => AppTab.launcher);
 
@@ -30,6 +31,7 @@ class MainScreen extends ConsumerWidget {
                 ModBrowserScreen(),
                 EngineManagerScreen(),
                 ModPackListScreen(),
+                MapViewerScreen(),
               ],
             ),
           ),
@@ -52,16 +54,19 @@ class _NavBar extends ConsumerWidget {
         color: Theme.of(context).colorScheme.surface,
         border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
       ),
-      child: Row(
-        children: [
-          for (final t in AppTab.values)
-            _NavTab(
-              icon: _iconFor(t),
-              label: _labelFor(t),
-              selected: t == tab,
-              onTap: () => ref.read(currentTabProvider.notifier).state = t,
-            ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final t in AppTab.values)
+              _NavTab(
+                icon: _iconFor(t),
+                label: _labelFor(t),
+                selected: t == tab,
+                onTap: () => ref.read(currentTabProvider.notifier).state = t,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -71,6 +76,7 @@ class _NavBar extends ConsumerWidget {
     AppTab.modBrowser => Icons.search,
     AppTab.engines => Icons.download_for_offline_outlined,
     AppTab.modPacks => Icons.folder_outlined,
+    AppTab.mapViewer => Icons.map_outlined,
   };
 
   String _labelFor(AppTab t) => switch (t) {
@@ -78,6 +84,7 @@ class _NavBar extends ConsumerWidget {
     AppTab.modBrowser => 'Mod Browser',
     AppTab.engines => 'Engines',
     AppTab.modPacks => 'Mod Packs',
+    AppTab.mapViewer => 'Map Viewer',
   };
 }
 

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/mod_search_provider.dart';
-import '../providers/mod_download_provider.dart';
 import '../../domain/entities/mod_file.dart';
 
 class ModBrowserScreen extends ConsumerStatefulWidget {
@@ -35,7 +34,6 @@ class _ModBrowserScreenState extends ConsumerState<ModBrowserScreen> {
   @override
   Widget build(BuildContext context) {
     final searchState = ref.watch(modSearchProvider);
-    final downloadState = ref.watch(modDownloadProvider);
 
     return Column(
       children: [
@@ -80,15 +78,7 @@ class _ModBrowserScreenState extends ConsumerState<ModBrowserScreen> {
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: results.length,
-                itemBuilder: (context, index) {
-                  final mod = results[index];
-                  final isDownloading = downloadState.isDownloading;
-                  return _ModResultCard(
-                    mod: mod,
-                    isDownloading: isDownloading,
-                    onDownload: () => ref.read(modDownloadProvider.notifier).download(mod),
-                  );
-                },
+                itemBuilder: (context, index) => _ModResultCard(mod: results[index]),
               );
             },
             loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -97,16 +87,6 @@ class _ModBrowserScreenState extends ConsumerState<ModBrowserScreen> {
             ),
           ),
         ),
-        if (downloadState.isDownloading)
-          _DownloadProgressBar(progress: downloadState.progress),
-        if (downloadState.error != null)
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(
-              downloadState.error!,
-              style: const TextStyle(color: Colors.red, fontSize: 12),
-            ),
-          ),
       ],
     );
   }
@@ -114,14 +94,8 @@ class _ModBrowserScreenState extends ConsumerState<ModBrowserScreen> {
 
 class _ModResultCard extends StatelessWidget {
   final ModFile mod;
-  final bool isDownloading;
-  final VoidCallback onDownload;
 
-  const _ModResultCard({
-    required this.mod,
-    required this.isDownloading,
-    required this.onDownload,
-  });
+  const _ModResultCard({required this.mod});
 
   @override
   Widget build(BuildContext context) {
@@ -171,38 +145,14 @@ class _ModResultCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            FilledButton.tonalIcon(
-              onPressed: isDownloading ? null : onDownload,
-              icon: const Icon(Icons.download, size: 16),
-              label: const Text('Get', style: TextStyle(fontSize: 12)),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
+            Chip(
+              label: const Text('Soon', style: TextStyle(fontSize: 10)),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _DownloadProgressBar extends StatelessWidget {
-  final double progress;
-
-  const _DownloadProgressBar({required this.progress});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: LinearProgressIndicator(value: progress, minHeight: 4),
-          ),
-          const SizedBox(width: 8),
-          Text('${(progress * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12)),
-        ],
       ),
     );
   }
