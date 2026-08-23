@@ -54,4 +54,36 @@ void main() {
 
     expect(picked, isNull);
   });
+
+  testWidgets('dragging does not trigger a selection', (tester) async {
+    MapSelection? picked = const LinedefSelection(0);
+    await pumpViewer(tester, onSelection: (s) => picked = s);
+
+    // Start the drag on the thing, then move well past the tap threshold.
+    final gesture = await tester.startGesture(const Offset(400, 300));
+    await gesture.moveBy(const Offset(60, 0));
+    await gesture.up();
+    await tester.pump();
+
+    expect(picked, const LinedefSelection(0));
+  });
+
+  testWidgets('cursor is grab at rest and grabbing while dragging',
+      (tester) async {
+    await pumpViewer(tester, onSelection: (_) {});
+
+    final atRest = tester.widget<MouseRegion>(
+        find.byKey(const Key('mapViewportMouseRegion')));
+    expect(atRest.cursor, SystemMouseCursors.grab);
+
+    final gesture = await tester.startGesture(const Offset(400, 300));
+    await tester.pump();
+
+    final dragging = tester.widget<MouseRegion>(
+        find.byKey(const Key('mapViewportMouseRegion')));
+    expect(dragging.cursor, SystemMouseCursors.grabbing);
+
+    await gesture.up();
+    await tester.pump();
+  });
 }

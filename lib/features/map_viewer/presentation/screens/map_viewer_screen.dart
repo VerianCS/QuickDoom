@@ -28,8 +28,8 @@ class _MapViewerScreenState extends State<MapViewerScreen> {
 
   Future<void> _openWad() async {
     final path = await _filePicker.pickFile(
-      allowedExtensions: ['wad'],
-      dialogTitle: 'Select a WAD file',
+      allowedExtensions: ['wad', 'pk3', 'pk4', 'zip'],
+      dialogTitle: 'Select a WAD or PK3 file',
     );
     if (path == null) return;
 

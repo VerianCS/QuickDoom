@@ -73,6 +73,7 @@ class UdmfParser {
 
     while (parser.hasNext) {
       final block = parser.nextBlock();
+      if (block == null) break;
       switch (block.name) {
         case 'vertex':
           vertices.add(Vertex(
@@ -432,34 +433,66 @@ class _UdmfBlockParser {
 
   bool get hasNext => _i < _tokens.length;
 
-  _Block nextBlock() {
-    final nameTok = _expect(_TokenKind.ident, 'expected block name');
-    _expect(_TokenKind.braceOpen, 'expected "{" after "${nameTok.text}"');
-
-    final block = _Block(nameTok.text);
-    while (_i < _tokens.length && _tokens[_i].kind != _TokenKind.braceClose) {
-      final key = _expect(_TokenKind.ident, 'expected property key').text;
-      _expect(_TokenKind.assign, 'expected "=" after "$key"');
-
-      final valueTok = _tokens[_i];
-      switch (valueTok.kind) {
-        case _TokenKind.number:
-          block.props[key] = _parseNumber(valueTok.text);
-        case _TokenKind.string:
-          block.props[key] = valueTok.text;
-        case _TokenKind.ident:
-          block.props[key] = valueTok.text;
-        default:
-          throw WadFormatException('Expected value for "$key" in TEXTMAP');
+  _Block? nextBlock() {
+    while (_i < _tokens.length) {
+      final tok = _tokens[_i];
+      if (tok.kind == _TokenKind.braceClose) {
+        _i++; // stray close brace; ignore
+        continue;
       }
-      _i++;
+      if (tok.kind != _TokenKind.ident) {
+        _i++; // unexpected top-level token; ignore
+        continue;
+      }
 
-      if (_i < _tokens.length && _tokens[_i].kind == _TokenKind.semicolon) {
+      // A top-level assignment (e.g. `namespace = "zdoom";`) is not a block.
+      if (_i + 1 < _tokens.length &&
+          _tokens[_i + 1].kind == _TokenKind.assign) {
+        _i += 2; // name + '='
+        if (_i < _tokens.length &&
+            _tokens[_i].kind != _TokenKind.braceClose) {
+          _i++; // value
+        }
+        if (_i < _tokens.length &&
+            _tokens[_i].kind == _TokenKind.semicolon) {
+          _i++;
+        }
+        continue;
+      }
+
+      // A real block: name { ... }
+      final nameTok = _tokens[_i++];
+      _expect(_TokenKind.braceOpen, 'expected "{" after "${nameTok.text}"');
+
+      final block = _Block(nameTok.text);
+      while (_i < _tokens.length &&
+          _tokens[_i].kind != _TokenKind.braceClose) {
+        final key = _expect(_TokenKind.ident, 'expected property key').text;
+        _expect(_TokenKind.assign, 'expected "=" after "$key"');
+
+        final valueTok = _tokens[_i];
+        switch (valueTok.kind) {
+          case _TokenKind.number:
+            block.props[key] = _parseNumber(valueTok.text);
+          case _TokenKind.string:
+            block.props[key] = valueTok.text;
+          case _TokenKind.ident:
+            block.props[key] = valueTok.text;
+          default:
+            throw WadFormatException('Expected value for "$key" in TEXTMAP');
+        }
         _i++;
+
+        if (_i < _tokens.length &&
+            _tokens[_i].kind == _TokenKind.semicolon) {
+          _i++;
+        }
       }
+      _expect(_TokenKind.braceClose,
+          'expected "}" to close "${nameTok.text}" block');
+      return block;
     }
-    _expect(_TokenKind.braceClose, 'expected "}" to close "${nameTok.text}" block');
-    return block;
+    return null;
   }
 
   _Token _expect(_TokenKind kind, String what) {

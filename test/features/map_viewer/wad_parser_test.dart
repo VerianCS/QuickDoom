@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -137,5 +138,46 @@ void main() {
 
     expect(() => WadParser.parseBytes(bytes),
         throwsA(isA<WadFormatException>()));
+  });
+
+  test('throws when the directory starts inside the header', () {
+    final bytes = WadFixture.build(
+      magic: 'PWAD',
+      lumps: const [('E1M1', <int>[])],
+    );
+    // Corrupt the directory offset to point into the header.
+    final view = ByteData.sublistView(bytes);
+    view.setUint32(8, 0, Endian.little);
+
+    expect(() => WadParser.parseBytes(bytes),
+        throwsA(isA<WadFormatException>()));
+  });
+
+  test('looks up lumps case-insensitively', () {
+    final wad = WadParser.parseBytes(WadFixture.classicDoomE1M1());
+
+    expect(wad.lumpByName('things'), isNotNull);
+    expect(wad.lumpByName('Things'), isNotNull);
+    expect(wad.lumpByName('THINGS'), isNotNull);
+    expect(wad.maps.single.lumpByName('vertexes'), isNotNull);
+  });
+
+  test('detects custom map names declared in MAPINFO', () {
+    final bytes = WadFixture.build(
+      magic: 'PWAD',
+      lumps: [
+        (
+          'MAPINFO',
+          latin1.encode('map MYMAP "My Custom Map"\n{\n}\n').toList(),
+        ),
+        ('MYMAP', const []),
+        ('THINGS', const [1, 2, 3, 4]),
+      ],
+    );
+
+    final wad = WadParser.parseBytes(bytes);
+
+    expect(wad.maps, hasLength(1));
+    expect(wad.maps.single.name, 'MYMAP');
   });
 }

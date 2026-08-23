@@ -8,8 +8,9 @@ class WadMapLumps {
   const WadMapLumps({required this.name, required this.lumps});
 
   WadLump? lumpByName(String lumpName) {
+    final upper = lumpName.toUpperCase();
     for (final lump in lumps) {
-      if (lump.name == lumpName) return lump;
+      if (lump.name == upper) return lump;
     }
     return null;
   }
@@ -28,8 +29,9 @@ class WadFile {
   bool get isPwad => magic == 'PWAD';
 
   WadLump? lumpByName(String name) {
+    final upper = name.toUpperCase();
     for (final lump in lumps) {
-      if (lump.name == name) return lump;
+      if (lump.name == upper) return lump;
     }
     return null;
   }
