@@ -50,7 +50,7 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
   /// True once the splash has finished fading out and can be torn down.
   bool _splashDismissed = false;
 
-  String _status = 'Starting…';
+  String _status = 'Starting...';
   final Stopwatch _bootStopwatch = Stopwatch();
   final FocusNode _focusNode = FocusNode();
 
@@ -80,7 +80,7 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
   }
 
   Future<void> _bootstrap() async {
-    _setStatus('Preparing window…');
+    _setStatus('Preparing window...');
     try {
       await windowManager.ensureInitialized();
       await windowManager.setPreventClose(false);
@@ -117,7 +117,7 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
       debugPrint('Init (non-fatal): $e');
     }
 
-    _setStatus('Opening storage…');
+    _setStatus('Opening storage...');
     try {
       await Hive.initFlutter();
     } catch (_) {}

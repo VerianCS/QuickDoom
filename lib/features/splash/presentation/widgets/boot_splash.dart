@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 /// Animated boot screen shown while the app hydrates.
 ///
@@ -27,7 +28,7 @@ class BootSplash extends StatefulWidget {
     super.key,
     required this.bootComplete,
     required this.onFinished,
-    this.status = 'Starting…',
+    this.status = 'Starting...',
     this.minimumDuration = const Duration(milliseconds: 1100),
     this.fadeOutDuration = const Duration(milliseconds: 420),
   });
@@ -207,32 +208,14 @@ class _SplashContent extends StatelessWidget {
           color: Color.lerp(AppColors.primaryDark, AppColors.primary, glow),
         ),
         const SizedBox(height: 18),
-        Text(
-          'QUICKDOOM',
-          style: TextStyle(
-            fontSize: 42,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 10,
-            color: Color.lerp(const Color(0xFFFFD9D0), Colors.white, glow),
-            shadows: [
-              Shadow(
-                color: AppColors.primary.withValues(alpha: 0.85 * glow),
-                blurRadius: 26 * glow,
-              ),
-              Shadow(
-                color: AppColors.secondary.withValues(alpha: 0.45 * glow),
-                blurRadius: 54 * glow,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
+        _Wordmark(glow: glow),
+        const SizedBox(height: 12),
         Text(
           'RIP AND TEAR, INSTANTLY',
           style: TextStyle(
-            fontSize: 11,
+            fontFamily: AppFonts.doomText,
+            fontSize: 13,
             letterSpacing: 4.5,
-            fontWeight: FontWeight.w600,
             color: AppColors.onBackground.withValues(alpha: 0.55),
           ),
         ),
@@ -242,12 +225,62 @@ class _SplashContent extends StatelessWidget {
         Text(
           status,
           style: TextStyle(
-            fontSize: 11,
-            letterSpacing: 1.2,
+            fontFamily: AppFonts.doomText,
+            fontSize: 13,
+            letterSpacing: 1.8,
             color: AppColors.onBackground.withValues(alpha: 0.45),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The QUICKDOOM lockup, built the way the Doom logo is: the first half in the
+/// left-bevelled cut and the second in the right-bevelled one, so the slants
+/// mirror around the middle. Tracking stays tight — spacing the letters out
+/// pulls the two halves apart and loses the effect.
+class _Wordmark extends StatelessWidget {
+  /// Flicker intensity, 0-1.
+  final double glow;
+
+  const _Wordmark({required this.glow});
+
+  @override
+  Widget build(BuildContext context) {
+    final base = TextStyle(
+      fontSize: 68,
+      letterSpacing: 2,
+      height: 1.0,
+      color: Color.lerp(const Color(0xFFFFD9D0), Colors.white, glow),
+      shadows: [
+        Shadow(
+          color: AppColors.primary.withValues(alpha: 0.85 * glow),
+          blurRadius: 26 * glow,
+        ),
+        Shadow(
+          color: AppColors.secondary.withValues(alpha: 0.45 * glow),
+          blurRadius: 54 * glow,
+        ),
+      ],
+    );
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: 'QUICK',
+            style: base.copyWith(fontFamily: AppFonts.doomLeft),
+          ),
+          TextSpan(
+            text: 'DOOM',
+            style: base.copyWith(fontFamily: AppFonts.doomRight),
+          ),
+        ],
+      ),
+      textAlign: TextAlign.center,
+      // One logical string for screen readers and for widget tests.
+      semanticsLabel: 'QUICKDOOM',
     );
   }
 }

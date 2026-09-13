@@ -1,0 +1,8 @@
+Doom 2016 font family (Doom2016Text, Doom2016Left, Doom2016Right)
+Source: https://www.fontspace.com/doom-2016-font-f43672
+License: Freeware, Non-Commercial
+
+These font files are NOT covered by QuickDoom's MIT license. They are
+redistributed here under the freeware, non-commercial terms above and remain
+the property of their author. Commercial use of QuickDoom would require
+replacing them or obtaining separate permission from the font's author.

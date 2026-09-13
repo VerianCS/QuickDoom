@@ -37,3 +37,18 @@ flutter:
   uses-material-design: true
   assets:
     - assets/app_icon.ico
+
+  # Doom 2016 display family, used for the boot splash wordmark.
+  # Freeware / non-commercial - see assets/fonts/LICENSE.txt.
+  # Left and Right are the mirrored bevel cuts the logo lockup is built from;
+  # Text is the upright face used for smaller copy.
+  fonts:
+    - family: Doom2016Text
+      fonts:
+        - asset: assets/fonts/Doom2016Text.ttf
+    - family: Doom2016Left
+      fonts:
+        - asset: assets/fonts/Doom2016Left.ttf
+    - family: Doom2016Right
+      fonts:
+        - asset: assets/fonts/Doom2016Right.ttf
