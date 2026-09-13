@@ -9,6 +9,7 @@ import '../widgets/doom_map_viewer.dart';
 import '../widgets/hologram_map_viewer.dart';
 import '../widgets/hologram_painter.dart';
 import '../widgets/map_geometry.dart';
+import '../widgets/map_strip.dart';
 
 /// Opens a WAD and browses its maps, either as a flat plan or as the
 /// holographic projection.
@@ -112,7 +113,7 @@ class _MapViewerScreenState extends State<MapViewerScreen> {
             ),
           if (_maps != null && _maps!.length > 1) ...[
             const SizedBox(height: 12),
-            _MapStrip(
+            MapStrip(
               maps: _maps!,
               current: _current,
               onSelected: (map) => setState(() {
@@ -317,62 +318,6 @@ class _ModeSwitch extends StatelessWidget {
           segment(MapViewMode.hologram, Icons.view_in_ar_outlined, '3D'),
           segment(MapViewMode.plan, Icons.grid_on_outlined, 'Plan'),
         ],
-      ),
-    );
-  }
-}
-
-class _MapStrip extends StatelessWidget {
-  final List<DoomMap> maps;
-  final DoomMap? current;
-  final ValueChanged<DoomMap> onSelected;
-
-  const _MapStrip({
-    required this.maps,
-    required this.current,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 34,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: maps.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final map = maps[index];
-          final selected = identical(map, current);
-
-          return InkWell(
-            onTap: () => onSelected(map),
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: selected
-                    ? AppColors.primary.withValues(alpha: 0.18)
-                    : Colors.transparent,
-                border: Border.all(
-                  color: selected
-                      ? AppColors.primary.withValues(alpha: 0.6)
-                      : Theme.of(context).dividerColor,
-                ),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                map.name,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                  color: selected ? AppColors.primary : null,
-                ),
-              ),
-            ),
-          );
-        },
       ),
     );
   }
