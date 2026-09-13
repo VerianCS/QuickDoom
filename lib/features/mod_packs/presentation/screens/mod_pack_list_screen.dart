@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../main/presentation/screens/main_screen.dart';
 import '../../domain/entities/mod_pack.dart';
+import '../providers/mod_pack_launcher.dart';
 import '../providers/mod_pack_provider.dart';
 import 'mod_pack_editor_screen.dart';
 
@@ -50,6 +52,7 @@ class ModPackListScreen extends ConsumerWidget {
                   return _ModPackCard(
                     pack: pack,
                     onEdit: () => _editPack(context, pack),
+                    onLoad: () => _loadPack(context, ref, pack),
                     onDuplicate: () => _duplicatePack(ref, pack),
                     onDelete: () => _deletePack(ref, pack),
                   );
@@ -90,17 +93,43 @@ class ModPackListScreen extends ConsumerWidget {
   void _deletePack(WidgetRef ref, ModPack pack) {
     ref.read(modPackListProvider.notifier).delete(pack.id);
   }
+
+  Future<void> _loadPack(
+    BuildContext context,
+    WidgetRef ref,
+    ModPack pack,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final result =
+        await ref.read(modPackLauncherProvider).loadIntoLauncher(pack);
+
+    ref.read(currentTabProvider.notifier).state = AppTab.launcher;
+
+    final warning = result.warning;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(
+          warning == null
+              ? 'Loaded "${pack.name}" — ${result.fileCount} file'
+                  '${result.fileCount == 1 ? '' : 's'} ready to launch.'
+              : 'Loaded "${pack.name}" with issues: $warning.',
+        ),
+      ));
+  }
 }
 
 class _ModPackCard extends StatelessWidget {
   final ModPack pack;
   final VoidCallback onEdit;
+  final VoidCallback onLoad;
   final VoidCallback onDuplicate;
   final VoidCallback onDelete;
 
   const _ModPackCard({
     required this.pack,
     required this.onEdit,
+    required this.onLoad,
     required this.onDuplicate,
     required this.onDelete,
   });
@@ -116,22 +145,36 @@ class _ModPackCard extends StatelessWidget {
         ),
         title: Text(pack.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         subtitle: Text(
-          '${pack.modIds.length} mods',
+          pack.entries.isEmpty
+              ? 'Empty pack'
+              : '${pack.entries.length} mod'
+                  '${pack.entries.length == 1 ? '' : 's'}'
+                  ' · ${pack.enabledCount} enabled',
           style: const TextStyle(fontSize: 12),
         ),
-        trailing: PopupMenuButton<String>(
-          itemBuilder: (_) => [
-            const PopupMenuItem(value: 'edit', child: Text('Edit')),
-            const PopupMenuItem(value: 'duplicate', child: Text('Duplicate')),
-            const PopupMenuItem(value: 'delete', child: Text('Delete')),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.rocket_launch_outlined, size: 18),
+              tooltip: 'Load into Launcher',
+              onPressed: pack.entries.isEmpty ? null : onLoad,
+            ),
+            PopupMenuButton<String>(
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                const PopupMenuItem(value: 'duplicate', child: Text('Duplicate')),
+                const PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
+              onSelected: (action) {
+                switch (action) {
+                  case 'edit': onEdit();
+                  case 'duplicate': onDuplicate();
+                  case 'delete': onDelete();
+                }
+              },
+            ),
           ],
-          onSelected: (action) {
-            switch (action) {
-              case 'edit': onEdit();
-              case 'duplicate': onDuplicate();
-              case 'delete': onDelete();
-            }
-          },
         ),
         onTap: onEdit,
       ),

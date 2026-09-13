@@ -6,7 +6,7 @@ part of 'mod_pack_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$modPackListHash() => r'8815467b093507ea768c876127fc2fd37351d616';
+String _$modPackListHash() => r'9c20b6fd6704bee8240e29fa1663dd1b4a777ea3';
 
 /// See also [ModPackList].
 @ProviderFor(ModPackList)

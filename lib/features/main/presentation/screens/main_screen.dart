@@ -7,8 +7,9 @@ import '../../../mod_browser/presentation/screens/mod_browser_screen.dart';
 import '../../../engine_manager/presentation/screens/engine_manager_screen.dart';
 import '../../../mod_packs/presentation/screens/mod_pack_list_screen.dart';
 import '../../../map_viewer/presentation/screens/map_viewer_screen.dart';
+import '../../../library/presentation/screens/library_screen.dart';
 
-enum AppTab { launcher, modBrowser, engines, modPacks, mapViewer }
+enum AppTab { launcher, modBrowser, engines, library, modPacks, mapViewer }
 
 final currentTabProvider = StateProvider<AppTab>((ref) => AppTab.launcher);
 
@@ -30,6 +31,7 @@ class MainScreen extends ConsumerWidget {
                 LauncherScreen(),
                 ModBrowserScreen(),
                 EngineManagerScreen(),
+                LibraryScreen(),
                 ModPackListScreen(),
                 MapViewerScreen(),
               ],
@@ -75,6 +77,7 @@ class _NavBar extends ConsumerWidget {
     AppTab.launcher => Icons.rocket_launch_outlined,
     AppTab.modBrowser => Icons.search,
     AppTab.engines => Icons.download_for_offline_outlined,
+    AppTab.library => Icons.inventory_2_outlined,
     AppTab.modPacks => Icons.folder_outlined,
     AppTab.mapViewer => Icons.map_outlined,
   };
@@ -83,6 +86,7 @@ class _NavBar extends ConsumerWidget {
     AppTab.launcher => 'Launch',
     AppTab.modBrowser => 'Mod Browser',
     AppTab.engines => 'Engines',
+    AppTab.library => 'Library',
     AppTab.modPacks => 'Mod Packs',
     AppTab.mapViewer => 'Map Viewer',
   };

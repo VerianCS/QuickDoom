@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
+
 import '../http/browser_client.dart';
 
 class IdgamesFileResult {
@@ -54,8 +56,30 @@ class IdgamesFileResult {
   }
 }
 
+/// An idgames request that failed, or that the archive answered with an error.
+///
+/// Reported rather than swallowed so a network or API problem is not shown as
+/// "no results found".
+class IdgamesApiException implements Exception {
+  final String message;
+
+  const IdgamesApiException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class IdgamesApiService {
   static const String _baseUrl = 'https://www.doomworld.com/idgames/api/api.php';
+
+  /// Pulls the human-readable reason out of an idgames error payload.
+  static String _errorMessage(Map<String, dynamic> body) {
+    final error = body['error'];
+    if (error is Map && error['message'] is String) {
+      return error['message'] as String;
+    }
+    return 'The idgames archive returned an error.';
+  }
 
   Future<List<IdgamesFileResult>> search({
     required String query,
@@ -75,12 +99,23 @@ class IdgamesApiService {
     });
 
     final client = BrowserClient();
-    final response = await client.get(uri);
-    client.close();
-    if (response.statusCode != 200) return [];
+    final http.Response response;
+    try {
+      response = await client.get(uri);
+    } finally {
+      client.close();
+    }
+
+    if (response.statusCode != 200) {
+      throw IdgamesApiException(
+        'idgames returned HTTP ${response.statusCode}.',
+      );
+    }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
-    if (body case {'error': _}) return [];
+    if (body case {'error': _}) throw IdgamesApiException(_errorMessage(body));
+
+    // A search with no matches comes back as a warning, which is not an error.
 
     final content = body['content'] as Map<String, dynamic>?;
     if (content == null) return [];
@@ -110,12 +145,21 @@ class IdgamesApiService {
     });
 
     final client = BrowserClient();
-    final response = await client.get(uri);
-    client.close();
-    if (response.statusCode != 200) return null;
+    final http.Response response;
+    try {
+      response = await client.get(uri);
+    } finally {
+      client.close();
+    }
+
+    if (response.statusCode != 200) {
+      throw IdgamesApiException(
+        'idgames returned HTTP ${response.statusCode}.',
+      );
+    }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
-    if (body case {'error': _}) return null;
+    if (body case {'error': _}) throw IdgamesApiException(_errorMessage(body));
 
     final content = body['content'] as Map<String, dynamic>?;
     if (content == null) return null;

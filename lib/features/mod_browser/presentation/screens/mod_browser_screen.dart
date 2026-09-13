@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/mod_search_provider.dart';
 import '../../domain/entities/mod_file.dart';
+import '../../../downloads/domain/download_task.dart';
+import '../../../downloads/presentation/providers/download_queue_provider.dart';
+import '../../../downloads/presentation/widgets/download_button.dart';
 
 class ModBrowserScreen extends ConsumerStatefulWidget {
   const ModBrowserScreen({super.key});
@@ -92,13 +95,13 @@ class _ModBrowserScreenState extends ConsumerState<ModBrowserScreen> {
   }
 }
 
-class _ModResultCard extends StatelessWidget {
+class _ModResultCard extends ConsumerWidget {
   final ModFile mod;
 
   const _ModResultCard({required this.mod});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
@@ -145,11 +148,10 @@ class _ModResultCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Chip(
-              label: const Text('Soon', style: TextStyle(fontSize: 10)),
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            DownloadButton(
+              taskId: DownloadTask.modKey(mod.id),
+              onStart: () =>
+                  ref.read(downloadQueueProvider.notifier).downloadMod(mod),
             ),
           ],
         ),

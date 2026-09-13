@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/platform_utils.dart';
 import '../../domain/entities/engine_source.dart';
 import '../../domain/entities/engine_release.dart';
 import '../providers/engine_list_provider.dart';
 import '../providers/engine_releases_provider.dart';
+import '../../../downloads/domain/download_task.dart';
+import '../../../downloads/presentation/providers/download_queue_provider.dart';
+import '../../../downloads/presentation/widgets/download_button.dart';
 
 class EngineManagerScreen extends ConsumerWidget {
   const EngineManagerScreen({super.key});
@@ -16,9 +20,24 @@ class EngineManagerScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text('Source Port Downloads', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Source Port Downloads',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text(
+                'Showing ${enginePlatformLabel()} builds — installed engines are '
+                'added to the launcher automatically.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
+                ),
+              ),
+            ],
+          ),
         ),
         Expanded(
           child: ListView.builder(
@@ -57,7 +76,10 @@ class _EngineSourceCard extends ConsumerWidget {
                 );
               }
               return Column(
-                children: releases.take(10).map((r) => _ReleaseCard(release: r)).toList(),
+                children: releases
+                    .take(10)
+                    .map((r) => _ReleaseCard(engine: engine, release: r))
+                    .toList(),
               );
             },
             loading: () => const Padding(
@@ -76,9 +98,18 @@ class _EngineSourceCard extends ConsumerWidget {
 }
 
 class _ReleaseCard extends ConsumerWidget {
+  final EngineSource engine;
   final EngineRelease release;
 
-  const _ReleaseCard({required this.release});
+  const _ReleaseCard({required this.engine, required this.release});
+
+  List<EngineAsset> get _platformAssets =>
+      release.assetsForPlatform(enginePlatformKey());
+
+  /// Falls back to every asset when the release ships nothing matching this
+  /// platform, so an unusual naming scheme is not a dead end.
+  List<EngineAsset> get _assetsToShow =>
+      _platformAssets.isNotEmpty ? _platformAssets : release.assets;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -115,31 +146,90 @@ class _ReleaseCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ...release.assetsForPlatform('windows').map((asset) => ListTile(
-              dense: true,
-              leading: Icon(Icons.file_download_outlined, size: 18, color: Theme.of(context).colorScheme.onSurface.withAlpha(100)),
-              title: Text(asset.name, style: const TextStyle(fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(asset.sizeFormatted, style: const TextStyle(fontSize: 11)),
-                  const SizedBox(width: 8),
-                  Chip(
-                    label: const Text('Soon', style: TextStyle(fontSize: 10)),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ..._assetsToShow.map((asset) => _AssetRow(
+                  engine: engine,
+                  release: release,
+                  asset: asset,
+                )),
+            if (_assetsToShow.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(
+                  'No downloadable assets in this release.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
                   ),
-                ],
-              ),
-            )),
-            if (release.assetsForPlatform('windows').isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(8),
-                child: Text('No Windows assets found', style: TextStyle(fontSize: 12)),
+                ),
+              )
+            else if (_platformAssets.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Text(
+                  'No ${enginePlatformLabel()} build in this release — showing '
+                  'all assets.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
+                  ),
+                ),
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+
+/// Platform key understood by [EngineRelease.assetsForPlatform].
+String enginePlatformKey() => switch (PlatformUtils.current) {
+      AppPlatform.windows => 'windows',
+      AppPlatform.linux => 'linux',
+      AppPlatform.macOS => 'macos',
+    };
+
+String enginePlatformLabel() => switch (PlatformUtils.current) {
+      AppPlatform.windows => 'Windows',
+      AppPlatform.linux => 'Linux',
+      AppPlatform.macOS => 'macOS',
+    };
+
+class _AssetRow extends ConsumerWidget {
+  final EngineSource engine;
+  final EngineRelease release;
+  final EngineAsset asset;
+
+  const _AssetRow({
+    required this.engine,
+    required this.release,
+    required this.asset,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      dense: true,
+      leading: Icon(
+        Icons.file_download_outlined,
+        size: 18,
+        color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
+      ),
+      title: Text(
+        asset.name,
+        style: const TextStyle(fontSize: 12),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(asset.sizeFormatted, style: const TextStyle(fontSize: 11)),
+      trailing: DownloadButton(
+        taskId: DownloadTask.engineKey(engine.id, release.tagName, asset.name),
+        idleLabel: 'Install',
+        onStart: () => ref.read(downloadQueueProvider.notifier).downloadEngine(
+              source: engine,
+              release: release,
+              asset: asset,
+            ),
       ),
     );
   }

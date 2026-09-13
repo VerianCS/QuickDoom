@@ -9,6 +9,7 @@ import 'router/app_router.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 import 'widgets/custom_title_bar.dart';
+import '../features/splash/presentation/widgets/boot_splash.dart';
 import '../data/models/iwad_model.dart';
 import '../data/models/launch_profile_model.dart';
 import '../data/models/pwad_model.dart';
@@ -45,6 +46,11 @@ class _BootPipeline extends ConsumerStatefulWidget {
 
 class _BootPipelineState extends ConsumerState<_BootPipeline> {
   bool _ready = false;
+
+  /// True once the splash has finished fading out and can be torn down.
+  bool _splashDismissed = false;
+
+  String _status = 'Starting…';
   final Stopwatch _bootStopwatch = Stopwatch();
   final FocusNode _focusNode = FocusNode();
 
@@ -53,12 +59,18 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
   void initState() {
     super.initState();
     if (WidgetsBinding.instance.toString().contains('Test')) {
+      // Widget tests drive frames by hand; a looping splash would never settle.
       _ready = true;
+      _splashDismissed = true;
     } else {
       _bootStopwatch.start();
       WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
     }
     _focusNode.requestFocus();
+  }
+
+  void _setStatus(String status) {
+    if (mounted) setState(() => _status = status);
   }
 
   @override
@@ -68,6 +80,7 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
   }
 
   Future<void> _bootstrap() async {
+    _setStatus('Preparing window…');
     try {
       await windowManager.ensureInitialized();
       await windowManager.setPreventClose(false);
@@ -104,6 +117,7 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
       debugPrint('Init (non-fatal): $e');
     }
 
+    _setStatus('Opening storage…');
     try {
       await Hive.initFlutter();
     } catch (_) {}
@@ -125,16 +139,35 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
     debugPrint('⚡ Bootstrap ready: ${_bootStopwatch.elapsedMilliseconds} ms');
 
     if (mounted) {
-      setState(() => _ready = true);
+      setState(() {
+        _status = 'Ready';
+        _ready = true;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_ready) {
-      return _BootSkeleton();
-    }
+    if (_splashDismissed) return _shell();
 
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // The shell mounts underneath as soon as it has data, so the splash
+        // cross-fades onto a painted UI rather than an empty frame.
+        if (_ready) _shell(),
+        BootSplash(
+          bootComplete: _ready,
+          status: _status,
+          onFinished: () {
+            if (mounted) setState(() => _splashDismissed = true);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _shell() {
     return CallbackShortcuts(
       bindings: {
         SingleActivator(LogicalKeyboardKey.keyL, control: true): () {
@@ -197,43 +230,6 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
             },
             child: const Text('Create'),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BootSkeleton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.background,
-      child: Column(
-        children: [
-          Container(
-            height: 36,
-            color: AppColors.titleBar,
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                Icon(
-                  Icons.gamepad,
-                  size: 16,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'QuickDoom',
-                  style: TextStyle(
-                    color: AppColors.onSurface.withAlpha(200),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Expanded(child: SizedBox.shrink()),
         ],
       ),
     );
