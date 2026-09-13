@@ -6,6 +6,9 @@ import '../../domain/models/doom_map.dart';
 import 'map_geometry.dart';
 import 'map_viewport.dart';
 
+/// How the map is drawn: flat plan, or the extruded holographic projection.
+enum MapViewMode { plan, hologram }
+
 /// Which layers are drawn.
 class MapViewerLayers {
   final bool showSectors;
