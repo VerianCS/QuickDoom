@@ -147,7 +147,9 @@ class _LauncherScreenState extends ConsumerState<LauncherScreen> {
             QuickLaunchBar(
               canLaunch: state.canLaunch,
               isLaunching: state.isLaunching,
-              onLaunch: () => ref.read(launchNotifierProvider.notifier).launch(),
+              onLaunch: ({required bool animate}) => ref
+                  .read(launchNotifierProvider.notifier)
+                  .launch(animate: animate),
             ),
           ],
         ),

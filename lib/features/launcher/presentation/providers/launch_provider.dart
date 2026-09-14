@@ -1,15 +1,12 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:window_manager/window_manager.dart';
 
-import '../../../../core/services/process_service.dart';
-import '../../../../data/repositories/process_launcher_impl.dart';
 import '../../../../domain/entities/iwad.dart';
 import '../../../../domain/entities/launch_profile.dart';
 import '../../../../domain/entities/pwad.dart';
 import '../../../../domain/entities/source_port.dart';
-import '../../../../domain/interfaces/i_process_launcher.dart';
 import '../../../../domain/usecases/build_launch_command.dart';
-import 'process_provider.dart';
+import '../../domain/launch_sequence.dart';
+import 'launch_sequence_provider.dart';
 
 part 'launch_provider.g.dart';
 
@@ -118,15 +115,21 @@ class LaunchNotifier extends _$LaunchNotifier {
     );
   }
 
-  Future<void> launch() async {
+  /// Runs the launch takeover and starts the game.
+  ///
+  /// [animate] is false when the platform asks for reduced motion or the user
+  /// has turned the sequence off; the stages still run, they just take no
+  /// time, so there is only one path through this code.
+  Future<void> launch({bool animate = true}) async {
     if (!state.canLaunch) return;
 
-    state = state.copyWith(isLaunching: true, clearError: true, launchSuccess: false);
+    state = state.copyWith(
+      isLaunching: true,
+      clearError: true,
+      launchSuccess: false,
+    );
 
     try {
-      final commandBuilder = BuildLaunchCommand();
-      final launcher = _createLauncher();
-
       final profile = LaunchProfile(
         id: '',
         name: 'Quick Launch',
@@ -136,30 +139,28 @@ class LaunchNotifier extends _$LaunchNotifier {
         customArgs: state.customArgs,
       );
 
-      final args = commandBuilder.buildArgs(
+      final args = BuildLaunchCommand().buildArgs(
         profile: profile,
         port: state.sourcePort!,
         iwad: state.iwad!,
       );
 
-      final result = await launcher.launch(state.sourcePort!.executablePath, args);
+      final outcome = await ref.read(launchSequenceProvider.notifier).run(
+            executable: state.sourcePort!.executablePath,
+            args: args,
+            portName: state.sourcePort!.name,
+            iwadName: state.iwad!.name,
+            modCount: state.pwads.where((p) => p.isEnabled).length,
+            timings: animate && ref.read(launchAnimationEnabledProvider)
+                ? LaunchTimings.standard
+                : LaunchTimings.instant,
+          );
 
-      final runningProcess = RunningProcess(
-        result: result,
-        executable: state.sourcePort!.executablePath,
-        args: args,
+      state = state.copyWith(
+        isLaunching: false,
+        launchSuccess: outcome.started,
+        error: outcome.started ? null : 'Launch failed: ${outcome.error}',
       );
-      ref.read(processManagerProvider.notifier).track(runningProcess);
-
-      await windowManager.hide();
-
-      result.exitCode.then((code) async {
-        ref.read(processManagerProvider.notifier).clear();
-        await windowManager.show();
-        await windowManager.focus();
-      });
-
-      state = state.copyWith(isLaunching: false, launchSuccess: true);
     } catch (e) {
       state = state.copyWith(
         isLaunching: false,
@@ -183,9 +184,5 @@ class LaunchNotifier extends _$LaunchNotifier {
 
   void clearAll() {
     state = const LaunchState();
-  }
-
-  IProcessLauncher _createLauncher() {
-    return ProcessLauncherImpl(ProcessService());
   }
 }
