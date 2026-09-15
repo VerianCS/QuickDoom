@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../domain/entities/iwad.dart';
@@ -169,12 +170,14 @@ class LaunchNotifier extends _$LaunchNotifier {
       state = state.copyWith(
         isLaunching: false,
         launchSuccess: outcome.started,
-        error: outcome.started ? null : 'Launch failed: ${outcome.error}',
+        error: outcome.started
+            ? null
+            : 'Launch failed: ${readableLaunchError(outcome.error)}',
       );
     } catch (e) {
       state = state.copyWith(
         isLaunching: false,
-        error: 'Launch failed: $e',
+        error: 'Launch failed: ${readableLaunchError(e)}',
       );
     }
   }
@@ -195,4 +198,14 @@ class LaunchNotifier extends _$LaunchNotifier {
   void clearAll() {
     state = const LaunchState();
   }
+}
+
+/// Strips Dart's `Exception: ` prefix so a message written for the user is
+/// shown as written. The error plate said "Launch failed: Exception: Source
+/// port is not executable", which reads like a crash rather than advice.
+@visibleForTesting
+String readableLaunchError(Object? error) {
+  final text = error?.toString() ?? 'Unknown error';
+  const prefix = 'Exception: ';
+  return text.startsWith(prefix) ? text.substring(prefix.length) : text;
 }

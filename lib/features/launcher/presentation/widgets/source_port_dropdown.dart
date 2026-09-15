@@ -85,8 +85,7 @@ class SourcePortSelector extends ConsumerWidget {
   }
 
   Future<void> _browseAndAdd(WidgetRef ref) async {
-    final path = await FilePickerService().pickFile(
-      allowedExtensions: ['exe', 'AppImage', ''],
+    final path = await FilePickerService().pickExecutable(
       dialogTitle: 'Select Source Port Executable',
     );
     if (path == null) return;
@@ -126,8 +125,7 @@ class SourcePortSelector extends ConsumerWidget {
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.folder_open, size: 18),
                   onPressed: () async {
-                    final p = await FilePickerService().pickFile(
-                      allowedExtensions: ['exe', 'AppImage', ''],
+                    final p = await FilePickerService().pickExecutable(
                       dialogTitle: 'Select Source Port Executable',
                     );
                     if (p != null) pathCtrl.text = p;
