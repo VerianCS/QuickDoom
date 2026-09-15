@@ -219,8 +219,8 @@ The suite favours tests that would have caught a real bug: argument tokenization
 Pushing a version tag triggers the matrix pipeline in `.github/workflows/deploy.yml`:
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v0.5.0
+git push origin v0.5.0
 ```
 
 It builds Windows, Linux and macOS, tree-shakes and strips symbols, UPX-compresses, packs Windows into a single executable with warp-packer, and publishes the artifacts to a GitHub Release.
