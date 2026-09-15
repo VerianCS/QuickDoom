@@ -42,9 +42,17 @@ class PwadRail extends ConsumerWidget {
             buildDefaultDragHandles: false,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: pwads.length,
-            onReorderItem: (oldIndex, newIndex) => ref
+            // onReorder, not onReorderItem: the newer callback does not exist
+            // in every Flutter version this builds against, and using it broke
+            // the Windows build. onReorder reports the destination as an index
+            // into the list *before* the item is lifted out, so correct it here
+            // rather than inside movePwad, which takes a final-list position.
+            onReorder: (oldIndex, newIndex) => ref
                 .read(launchNotifierProvider.notifier)
-                .movePwad(oldIndex, newIndex),
+                .movePwad(
+                  oldIndex,
+                  newIndex > oldIndex ? newIndex - 1 : newIndex,
+                ),
             proxyDecorator: (child, index, animation) =>
                 Material(color: Colors.transparent, child: child),
             itemBuilder: (context, index) {
