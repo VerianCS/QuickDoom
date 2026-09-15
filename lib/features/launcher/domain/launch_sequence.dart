@@ -149,6 +149,23 @@ class LaunchSequenceState {
   bool get isTakingOver =>
       stage != LaunchStage.idle && stage != LaunchStage.summary;
 
+  /// True while a launch is actually under way.
+  ///
+  /// Deliberately not the same as [isTakingOver]: a fault is a state the
+  /// screen is *showing*, not a launch in progress. Guarding new launches on
+  /// "taking over" meant one failed launch left the button refusing every
+  /// attempt after it.
+  bool get isInFlight => switch (stage) {
+        LaunchStage.arm ||
+        LaunchStage.charge ||
+        LaunchStage.ignite ||
+        LaunchStage.handoff ||
+        LaunchStage.running ||
+        LaunchStage.returning =>
+          true,
+        _ => false,
+      };
+
   bool get isArmed =>
       stage == LaunchStage.arm ||
       stage == LaunchStage.charge ||

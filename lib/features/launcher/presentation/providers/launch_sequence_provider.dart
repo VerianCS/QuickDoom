@@ -75,6 +75,9 @@ class LaunchSequence extends _$LaunchSequence {
   /// How many trailing stderr lines are kept for a fault readout.
   static const int _errorTailLength = 6;
 
+  /// How long the fault flash sits before the sequence returns to idle.
+  static const Duration faultFlashDuration = Duration(milliseconds: 900);
+
   Timer? _pending;
   StreamSubscription<String>? _logs;
 
@@ -114,7 +117,9 @@ class LaunchSequence extends _$LaunchSequence {
     required int modCount,
     required LaunchTimings timings,
   }) async {
-    if (state.isTakingOver) return const LaunchOutcome.failed('Already launching');
+    if (state.isInFlight) {
+      return const LaunchOutcome.failed('A launch is already under way');
+    }
 
     final window = ref.read(windowControllerProvider);
     final launcher = ref.read(processLauncherProvider);
@@ -133,6 +138,9 @@ class LaunchSequence extends _$LaunchSequence {
     } catch (e) {
       // Never hide the window over a game that failed to start.
       state = state.copyWith(stage: LaunchStage.fault, error: '$e');
+      // The flash is a moment, not a mode: clear it so the next attempt is
+      // not refused and the button does not look stuck.
+      unawaited(_clearFault());
       return LaunchOutcome.failed('$e');
     }
 
@@ -146,14 +154,20 @@ class LaunchSequence extends _$LaunchSequence {
 
     final errorTail = <String>[];
     _logs?.cancel();
-    final logSubscription = result.outputLogs.listen((chunk) {
+
+    void collect(String chunk) {
       for (final line in chunk.split('\n')) {
         if (line.trim().isEmpty) continue;
         if (!line.contains('[STDERR]')) continue;
         errorTail.add(line.replaceAll('[STDERR]', '').trim());
         if (errorTail.length > _errorTailLength) errorTail.removeAt(0);
       }
-    });
+    }
+
+    // A port can fail and exit before this subscribes, so take what it has
+    // already written before following the live stream.
+    result.history.forEach(collect);
+    final logSubscription = result.outputLogs.listen(collect);
     _logs = logSubscription;
     // Completes when the process's pipes close, which can be after exitCode.
     final tailDrained = logSubscription.asFuture<void>();
@@ -222,6 +236,14 @@ class LaunchSequence extends _$LaunchSequence {
     state = state.copyWith(stage: LaunchStage.returning, summary: summary);
     await _hold(timings.powerOn);
     state = state.copyWith(stage: LaunchStage.summary, summary: summary);
+  }
+
+  /// Returns to idle once the fault flash has played.
+  Future<void> _clearFault() async {
+    await Future<void>.delayed(faultFlashDuration);
+    if (state.stage == LaunchStage.fault) {
+      state = LaunchSequenceState(focal: state.focal);
+    }
   }
 
   void _to(LaunchStage stage) {

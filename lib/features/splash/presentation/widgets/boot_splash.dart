@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_fonts.dart';
+import '../../../../app/widgets/crt_overlay.dart';
 
 /// Animated boot screen shown while the app hydrates.
 ///
@@ -143,7 +144,7 @@ class _BootSplashState extends State<BootSplash>
               },
             ),
           ),
-          const IgnorePointer(child: _ScanlineOverlay()),
+          const CrtOverlayLayer(),
         ],
       ),
     );
@@ -435,46 +436,4 @@ class _Ember {
   });
 }
 
-/// CRT scanlines plus a vignette, both static.
-class _ScanlineOverlay extends StatelessWidget {
-  const _ScanlineOverlay();
 
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: const _ScanlinePainter(),
-      size: Size.infinite,
-    );
-  }
-}
-
-class _ScanlinePainter extends CustomPainter {
-  const _ScanlinePainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final line = Paint()
-      ..color = Colors.black.withValues(alpha: 0.16)
-      ..strokeWidth = 1;
-
-    for (var y = 0.0; y < size.height; y += 3) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
-    }
-
-    final vignette = Paint()
-      ..shader = RadialGradient(
-        center: Alignment.center,
-        radius: 0.95,
-        colors: [
-          Colors.transparent,
-          Colors.black.withValues(alpha: 0.55),
-        ],
-        stops: const [0.62, 1.0],
-      ).createShader(Offset.zero & size);
-
-    canvas.drawRect(Offset.zero & size, vignette);
-  }
-
-  @override
-  bool shouldRepaint(_ScanlinePainter oldDelegate) => false;
-}

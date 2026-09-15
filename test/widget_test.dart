@@ -38,10 +38,14 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('QuickDoom'), findsOneWidget);
+    // Shell chrome sets its own labels in the display cut, which is upper
+    // case; the launcher's own copy is unchanged.
+    expect(find.text('QUICKDOOM'), findsOneWidget);
+    expect(find.text('LAUNCH'), findsOneWidget);
+    expect(find.text('MAP VIEWER'), findsOneWidget);
+
     expect(find.text('Source Port'), findsOneWidget);
     expect(find.text('IWAD'), findsOneWidget);
     expect(find.text('PWADs / Mods'), findsOneWidget);
-    expect(find.text('Launch'), findsNWidgets(2));
   });
 }

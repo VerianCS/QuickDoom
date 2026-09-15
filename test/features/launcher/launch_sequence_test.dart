@@ -344,6 +344,54 @@ void main() {
     });
   });
 
+  group('recovering from a fault', () {
+    test('a failed launch does not block the next one', () async {
+      // The fault stage used to count as "taking over", so one bad launch
+      // left the button refusing every attempt after it.
+      final failing = FakeLauncher(failWith: Exception('Executable not found'));
+      final container = containerWith(failing);
+
+      final first = await run(container);
+      expect(first.started, isFalse);
+
+      // Still faulted, and a second attempt is accepted rather than refused.
+      final second = await run(container);
+      expect(
+        second.error,
+        isNot(contains('already under way')),
+        reason: 'a fault is a shown state, not a launch in progress',
+      );
+    });
+
+    test('the fault clears itself back to idle', () async {
+      final launcher = FakeLauncher(failWith: Exception('boom'));
+      final container = containerWith(launcher);
+
+      await run(container);
+      expect(container.read(launchSequenceProvider).stage, LaunchStage.fault);
+
+      await Future<void>.delayed(
+        LaunchSequence.faultFlashDuration + const Duration(milliseconds: 120),
+      );
+
+      expect(container.read(launchSequenceProvider).stage, LaunchStage.idle);
+    });
+
+    test('a launch succeeds after an earlier failure', () async {
+      final failing = FakeLauncher(failWith: Exception('nope'));
+      final container = containerWith(failing);
+      await run(container);
+
+      // A fresh container stands in for the user picking a working port.
+      final working = FakeLauncher();
+      final second = containerWith(working);
+      final outcome = await run(second);
+
+      expect(outcome.started, isTrue);
+      expect(working.launches, 1);
+    });
+  });
+
   group('guards', () {
     test('a second launch while one is in flight is refused', () async {
       final launcher = FakeLauncher();
@@ -354,6 +402,7 @@ void main() {
       final second = await run(container, timings: LaunchTimings.standard);
 
       expect(second.started, isFalse);
+      expect(second.error, contains('already under way'));
       await first;
       expect(launcher.launches, 1);
     });

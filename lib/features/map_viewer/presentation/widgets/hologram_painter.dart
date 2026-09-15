@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../../../app/widgets/crt_overlay.dart';
 import '../../domain/models/doom_map.dart';
 import '../../domain/projection/hologram_camera.dart';
 import '../../domain/projection/map_mesh.dart';
@@ -341,12 +342,7 @@ class HologramPainter extends CustomPainter {
   /// Scanlines, a travelling scan band and a vignette — the same treatment the
   /// boot splash uses, so the two screens read as one system.
   void _paintOverlay(Canvas canvas, Size size) {
-    final line = Paint()
-      ..color = Colors.black.withValues(alpha: 0.13)
-      ..strokeWidth = 1;
-    for (var y = 0.0; y < size.height; y += 3) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
-    }
+    CrtOverlay.paintScanlines(canvas, size, opacity: 0.13);
 
     final bandY = size.height * sweep;
     canvas.drawRect(
@@ -364,15 +360,7 @@ class HologramPainter extends CustomPainter {
         ),
     );
 
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()
-        ..shader = RadialGradient(
-          radius: 0.95,
-          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.55)],
-          stops: const [0.6, 1.0],
-        ).createShader(Offset.zero & size),
-    );
+    CrtOverlay.paintVignette(canvas, size, start: 0.6);
   }
 
   /// Strokes [path] twice: a wide blurred pass for bloom, then a bright core.

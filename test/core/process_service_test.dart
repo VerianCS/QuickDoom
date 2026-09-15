@@ -23,6 +23,29 @@ void main() {
   });
 
   group('startProcess', () {
+    test('a late subscriber can still recover the whole session', () async {
+      // A game writes its banner before any widget exists to hear it. The
+      // first listener used to drain that buffer and leave the rest nothing.
+      final result = await ProcessService().startProcess(
+        '/bin/sh',
+        ['-c', 'echo banner; echo late 1>&2'],
+      );
+
+      expect(await result.exitCode, 0);
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+
+      // Two consumers, both attaching after everything was written.
+      final first = <String>[];
+      final second = <String>[];
+      result.outputLogs.listen(first.add);
+      result.outputLogs.listen(second.add);
+
+      expect(result.history.join(), contains('banner'));
+      expect(result.history.join(), contains('[STDERR] late'));
+      expect(first, isEmpty, reason: 'the live stream replays nothing');
+      expect(second, isEmpty);
+    });
+
     test('streams output and closes once the pipes drain', () async {
       final result = await ProcessService().startProcess(
         '/bin/sh',
@@ -36,6 +59,9 @@ void main() {
       // Completing at all is the point: the stream used to stay open forever,
       // so nothing could tell that the output was finished.
       await done.timeout(const Duration(seconds: 5));
+
+      // Whatever was written before this listener attached is still readable.
+      expect(result.history.join(), contains('out'));
 
       final text = lines.join();
       expect(text, contains('out'));
