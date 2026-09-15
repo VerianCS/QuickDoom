@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/file_picker_service.dart';
 import '../../../../domain/entities/iwad.dart';
 import '../../../iwads/presentation/providers/iwad_provider.dart';
 import '../providers/launch_provider.dart';
+import 'loadout_slot.dart';
+import 'slot_picker.dart';
 
+/// Slot II of the bench: the game the engine will run.
 class IwadSelector extends ConsumerWidget {
   const IwadSelector({super.key});
 
@@ -14,96 +18,68 @@ class IwadSelector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final iwadsAsync = ref.watch(iwadListProvider);
     final selected = ref.watch(launchNotifierProvider.select((s) => s.iwad));
+    final iwads = iwadsAsync.valueOrNull ?? const <Iwad>[];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('IWAD', style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: iwadsAsync.when(
-                data: (iwads) {
-                  final currentValue = selected != null && iwads.any((i) => i.id == selected.id)
-                      ? iwads.firstWhere((i) => i.id == selected.id)
-                      : null;
-                  return InputDecorator(
-                    decoration: const InputDecoration(
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<Iwad>(
-                        value: currentValue,
-                        hint: const Text('Select a saved IWAD...'),
-                        isExpanded: true,
-                        items: [
-                          ...iwads.map((i) => DropdownMenuItem(
-                            value: i,
-                            child: Text(i.name, overflow: TextOverflow.ellipsis),
-                          )),
-                          DropdownMenuItem(
-                            value: null,
-                            enabled: false,
-                            child: Row(
-                              children: [
-                                Icon(Icons.folder_open, size: 16, color: Theme.of(context).colorScheme.primary),
-                                const SizedBox(width: 8),
-                                Text('Browse...', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-                              ],
-                            ),
-                          ),
-                        ],
-                        onChanged: (iwad) {
-                          if (iwad != null) {
-                            ref.read(launchNotifierProvider.notifier).setIwad(iwad);
-                          } else {
-                            _browseAndAdd(ref);
-                          }
-                        },
-                      ),
-                    ),
-                  );
-                },
-                loading: () => const TextField(
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    hintText: 'Loading IWADs...',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                  ),
-                ),
-                error: (err, _) => TextField(
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    hintText: 'Error loading IWADs',
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                  ),
-                ),
-              ),
-            ),
-            if (selected != null) ...[
-              const SizedBox(width: 4),
-              _IconButton(
-                icon: Icons.edit_outlined,
-                tooltip: 'Edit',
-                onPressed: () => _showEditDialog(context, ref, selected),
-              ),
-              _IconButton(
-                icon: Icons.delete_outline,
-                tooltip: 'Delete',
-                onPressed: () => _confirmDelete(context, ref, selected),
-              ),
-            ],
-            const SizedBox(width: 8),
-            FilledButton.tonalIcon(
-              onPressed: () => _browseAndAdd(ref),
-              icon: const Icon(Icons.folder_open, size: 18),
-              label: const Text('Browse'),
-            ),
-          ],
+    return LoadoutSlot(
+      ordinal: 'II',
+      label: 'IWAD',
+      icon: Icons.album_outlined,
+      emptyHint:
+          iwadsAsync.isLoading ? 'Reading saved IWADs\u2026' : 'No game seated',
+      value: selected?.name,
+      detail: selected?.path,
+      onTap: () => _pick(context, ref, iwads, selected),
+      actions: [
+        if (selected != null) ...[
+          SlotAction(
+            icon: Icons.tune,
+            tooltip: 'Edit IWAD',
+            onPressed: () => _showEditDialog(context, ref, selected),
+          ),
+          SlotAction(
+            icon: Icons.delete_outline,
+            tooltip: 'Remove IWAD',
+            onPressed: () => _confirmDelete(context, ref, selected),
+          ),
+        ],
+        SlotAction(
+          icon: Icons.folder_open,
+          tooltip: 'Browse for a WAD',
+          tint: AppColors.primary,
+          onPressed: () => _browseAndAdd(ref),
         ),
       ],
     );
+  }
+
+  Future<void> _pick(
+    BuildContext context,
+    WidgetRef ref,
+    List<Iwad> iwads,
+    Iwad? selected,
+  ) async {
+    final choice = await showSlotPicker<Iwad>(
+      context: context,
+      title: 'IWAD',
+      entries: [
+        for (final i in iwads)
+          SlotEntry(
+            value: i,
+            label: i.name,
+            detail: i.path,
+            selected: i.id == selected?.id,
+          ),
+      ],
+      emptyLabel: 'No saved IWADs yet.',
+      browseLabel: 'Browse for a WAD\u2026',
+    );
+
+    if (choice == null) return;
+    if (choice.browse) {
+      await _browseAndAdd(ref);
+    } else if (choice.value != null) {
+      ref.read(launchNotifierProvider.notifier).setIwad(choice.value!);
+    }
   }
 
   Future<void> _browseAndAdd(WidgetRef ref) async {
@@ -197,32 +173,12 @@ class IwadSelector extends ConsumerWidget {
               ref.read(launchNotifierProvider.notifier).clearIwad();
               if (ctx.mounted) Navigator.of(ctx).pop();
             },
-            child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _IconButton extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  const _IconButton({required this.icon, required this.tooltip, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(4),
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Icon(icon, size: 18, color: Theme.of(context).colorScheme.onSurface.withAlpha(180)),
-        ),
       ),
     );
   }

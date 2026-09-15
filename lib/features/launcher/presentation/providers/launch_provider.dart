@@ -91,15 +91,25 @@ class LaunchNotifier extends _$LaunchNotifier {
     );
   }
 
-  void reorderPwad(int oldIndex, int newIndex) {
+  /// Moves the mod at [from] to sit at [to] in the final order.
+  ///
+  /// [to] is the destination in the list as it will be *after* the move, which
+  /// is what `ReorderableListView.onReorderItem` reports. Load order is then
+  /// renumbered from the new positions, because Doom resolves duplicate lumps
+  /// by load order and the index is the whole meaning of the row.
+  void movePwad(int from, int to) {
+    if (from == to) return;
     final pwads = List<Pwad>.from(state.pwads);
-    if (newIndex > oldIndex) newIndex--;
-    final item = pwads.removeAt(oldIndex);
-    pwads.insert(newIndex, item);
-    final reindexed = pwads.asMap().entries.map((e) =>
-      e.value.copyWith(loadOrder: e.key)
-    ).toList();
-    state = state.copyWith(pwads: reindexed);
+    if (from < 0 || from >= pwads.length) return;
+    final item = pwads.removeAt(from);
+    pwads.insert(to.clamp(0, pwads.length), item);
+    state = state.copyWith(
+      pwads: pwads
+          .asMap()
+          .entries
+          .map((e) => e.value.copyWith(loadOrder: e.key))
+          .toList(),
+    );
   }
 
   void setCustomArgs(String args) {

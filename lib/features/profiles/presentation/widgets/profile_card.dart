@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../domain/entities/launch_profile.dart';
 import '../providers/profile_provider.dart';
 
-class ProfileCard extends ConsumerWidget {
+/// One tab in the profile rack.
+///
+/// The selected profile is seated: its left edge lights and the tab reaches
+/// toward the bench, so the rack reads as a row of switches down the edge of
+/// the machine rather than as a list of documents.
+class ProfileCard extends ConsumerStatefulWidget {
   final LaunchProfile profile;
   final bool isSelected;
 
@@ -15,90 +21,106 @@ class ProfileCard extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tileColor = isSelected
-        ? Theme.of(context).colorScheme.primary.withAlpha(30)
-        : Colors.transparent;
+  ConsumerState<ProfileCard> createState() => _ProfileCardState();
+}
 
-    return GestureDetector(
-      onSecondaryTapDown: (details) =>
-          _showContextMenu(context, ref, details.globalPosition),
-      onLongPressStart: (details) =>
-          _showContextMenu(context, ref, details.globalPosition),
-      child: Material(
-        color: tileColor,
-        borderRadius: BorderRadius.circular(8),
-        child: ListTile(
-          dense: true,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: isSelected
-                ? BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 1,
-                  )
-                : BorderSide.none,
-          ),
-          title: Text(
-            profile.name,
-            style: TextStyle(
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.onSurface,
+class _ProfileCardState extends ConsumerState<ProfileCard> {
+  bool _hovered = false;
+
+  LaunchProfile get profile => widget.profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = widget.isSelected;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: () =>
+            ref.read(currentProfileIdProvider.notifier).select(profile.id),
+        onSecondaryTapDown: (d) =>
+            _showContextMenu(context, ref, d.globalPosition),
+        onLongPressStart: (d) =>
+            _showContextMenu(context, ref, d.globalPosition),
+        child: AnimatedContainer(
+          duration: AppMotion.fast,
+          curve: AppMotion.standard,
+          padding: const EdgeInsets.fromLTRB(0, 8, 4, 9),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.primary.withValues(alpha: 0.11)
+                : _hovered
+                    ? AppColors.surfaceHigh
+                    : Colors.transparent,
+            border: Border(
+              left: BorderSide(
+                color: selected
+                    ? AppColors.primary
+                    : _hovered
+                        ? AppColors.dividerColor
+                        : Colors.transparent,
+                width: 3,
+              ),
             ),
           ),
-          subtitle: Text(
-            _subtitle(),
-            style: TextStyle(
-              fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurface.withAlpha(128),
-            ),
-          ),
-          trailing: PopupMenuButton<String>(
-            icon: Icon(
-              Icons.more_vert,
-              size: 18,
-              color: Theme.of(context).colorScheme.onSurface.withAlpha(128),
-            ),
-            onSelected: (value) => _handleMenuAction(context, ref, value),
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'rename',
-                child: ListTile(
-                  leading: Icon(Icons.edit_outlined, size: 18),
-                  title: Text('Rename'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
+          child: Row(
+            children: [
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      profile.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        color: selected
+                            ? AppColors.primary
+                            : AppColors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _subtitle(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: AppColors.onSurfaceFaint,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const PopupMenuItem(
-                value: 'duplicate',
-                child: ListTile(
-                  leading: Icon(Icons.copy_outlined, size: 18),
-                  title: Text('Duplicate'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
+              if (_hovered || selected)
+                PopupMenuButton<String>(
+                  tooltip: 'Profile actions',
+                  padding: EdgeInsets.zero,
+                  iconSize: 16,
+                  icon: const Icon(
+                    Icons.more_horiz,
+                    color: AppColors.onBackground,
+                  ),
+                  onSelected: (v) => _handleMenuAction(context, ref, v),
+                  itemBuilder: (_) => _menuItems,
                 ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: ListTile(
-                  leading: Icon(Icons.delete_outline, size: 18),
-                  title: Text('Delete'),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
             ],
           ),
-          onTap: () {
-            ref.read(currentProfileIdProvider.notifier).select(profile.id);
-          },
         ),
       ),
     );
   }
+
+  static const List<PopupMenuEntry<String>> _menuItems = [
+    PopupMenuItem(value: 'rename', child: Text('Rename')),
+    PopupMenuItem(value: 'duplicate', child: Text('Duplicate')),
+    PopupMenuItem(value: 'delete', child: Text('Delete')),
+  ];
 
   String _subtitle() {
     final parts = <String>[];
@@ -217,9 +239,9 @@ class ProfileCard extends ConsumerWidget {
               ref.read(profileListProvider.notifier).delete(profile.id);
               Navigator.of(ctx).pop();
             },
-            child: Text(
+            child: const Text(
               'Delete',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              style: TextStyle(color: AppColors.error),
             ),
           ),
         ],
