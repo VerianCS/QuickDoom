@@ -21,6 +21,7 @@ import '../widgets/iwad_selector.dart';
 import '../widgets/pwad_rail.dart';
 import '../widgets/quick_launch_bar.dart';
 import '../widgets/source_port_dropdown.dart';
+import '../widgets/warp_plate.dart';
 
 class LauncherScreen extends ConsumerStatefulWidget {
   const LauncherScreen({super.key});
@@ -108,6 +109,7 @@ class _LauncherScreenState extends ConsumerState<LauncherScreen> {
                             onSave: () => _saveToProfile(ref),
                           ),
                           const SizedBox(height: 16),
+                          const WarpPlate(),
                           const SectionRule(
                             label: 'Engine & Game',
                             note: 'both required',

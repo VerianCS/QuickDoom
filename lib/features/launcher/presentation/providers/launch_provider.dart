@@ -5,6 +5,7 @@ import '../../../../domain/entities/iwad.dart';
 import '../../../../domain/entities/launch_profile.dart';
 import '../../../../domain/entities/pwad.dart';
 import '../../../../domain/entities/source_port.dart';
+import '../../../../domain/entities/warp_target.dart';
 import '../../../../domain/usecases/build_launch_command.dart';
 import '../../domain/launch_sequence.dart';
 import 'launch_sequence_provider.dart';
@@ -20,6 +21,9 @@ class LaunchState {
   final String? error;
   final bool launchSuccess;
 
+  /// The map to start on, set from the map viewer.
+  final WarpTarget? warp;
+
   const LaunchState({
     this.sourcePort,
     this.iwad,
@@ -28,6 +32,7 @@ class LaunchState {
     this.isLaunching = false,
     this.error,
     this.launchSuccess = false,
+    this.warp,
   });
 
   LaunchState copyWith({
@@ -38,7 +43,9 @@ class LaunchState {
     bool? isLaunching,
     String? error,
     bool? launchSuccess,
+    WarpTarget? warp,
     bool clearError = false,
+    bool clearWarp = false,
   }) {
     return LaunchState(
       sourcePort: sourcePort ?? this.sourcePort,
@@ -48,6 +55,7 @@ class LaunchState {
       isLaunching: isLaunching ?? this.isLaunching,
       error: clearError ? null : error ?? this.error,
       launchSuccess: launchSuccess ?? this.launchSuccess,
+      warp: clearWarp ? null : warp ?? this.warp,
     );
   }
 
@@ -64,6 +72,37 @@ class LaunchNotifier extends _$LaunchNotifier {
 
   void setSourcePort(SourcePort port) {
     state = state.copyWith(sourcePort: port, clearError: true);
+  }
+
+  /// Starts the next launch on [target].
+  ///
+  /// The map's own file is seated in the load order too, because warping to a
+  /// map the port has not been given is how you get a port that starts on the
+  /// IWAD's map of that number instead — silently the wrong level.
+  void setWarp(WarpTarget target) {
+    final path = target.sourcePath;
+    final alreadyLoaded = path == null ||
+        path == state.iwad?.path ||
+        state.pwads.any((p) => p.path == path);
+
+    state = state.copyWith(
+      warp: target,
+      clearError: true,
+      pwads: alreadyLoaded
+          ? state.pwads
+          : [
+              ...state.pwads,
+              Pwad(
+                id: 'warp-${DateTime.now().microsecondsSinceEpoch}',
+                path: path,
+                loadOrder: state.pwads.length,
+              ),
+            ],
+    );
+  }
+
+  void clearWarp() {
+    state = state.copyWith(clearWarp: true);
   }
 
   void clearSourcePort() {
@@ -154,6 +193,7 @@ class LaunchNotifier extends _$LaunchNotifier {
         profile: profile,
         port: state.sourcePort!,
         iwad: state.iwad!,
+        warp: state.warp,
       );
 
       final outcome = await ref.read(launchSequenceProvider.notifier).run(
