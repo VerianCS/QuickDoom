@@ -2,113 +2,96 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/file_picker_service.dart';
 import '../../../../domain/entities/source_port.dart';
 import '../../../source_ports/presentation/providers/source_port_provider.dart';
 import '../providers/launch_provider.dart';
+import '../providers/path_problem_provider.dart';
+import 'loadout_slot.dart';
+import 'slot_picker.dart';
 
+/// Slot I of the bench: the engine that will run.
 class SourcePortSelector extends ConsumerWidget {
   const SourcePortSelector({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final portsAsync = ref.watch(sourcePortListProvider);
-    final selected = ref.watch(launchNotifierProvider.select((s) => s.sourcePort));
+    final selected =
+        ref.watch(launchNotifierProvider.select((s) => s.sourcePort));
+    final ports = portsAsync.valueOrNull ?? const <SourcePort>[];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Source Port', style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: portsAsync.when(
-                data: (ports) {
-                  final currentValue = selected != null && ports.any((p) => p.id == selected.id)
-                      ? ports.firstWhere((p) => p.id == selected.id)
-                      : null;
-                  return InputDecorator(
-                    decoration: const InputDecoration(
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<SourcePort>(
-                        value: currentValue,
-                        hint: const Text('Select a saved port...'),
-                        isExpanded: true,
-                        items: [
-                          ...ports.map((p) => DropdownMenuItem(
-                            value: p,
-                            child: Text(p.name, overflow: TextOverflow.ellipsis),
-                          )),
-                          DropdownMenuItem(
-                            value: null,
-                            enabled: false,
-                            child: Row(
-                              children: [
-                                Icon(Icons.folder_open, size: 16, color: Theme.of(context).colorScheme.primary),
-                                const SizedBox(width: 8),
-                                Text('Browse...', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-                              ],
-                            ),
-                          ),
-                        ],
-                        onChanged: (port) {
-                          if (port != null) {
-                            ref.read(launchNotifierProvider.notifier).setSourcePort(port);
-                          } else {
-                            _browseAndAdd(ref);
-                          }
-                        },
-                      ),
-                    ),
-                  );
-                },
-                loading: () => const TextField(
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    hintText: 'Loading ports...',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                  ),
-                ),
-                error: (err, _) => TextField(
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    hintText: 'Error loading ports',
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                  ),
-                ),
-              ),
-            ),
-            if (selected != null) ...[
-              const SizedBox(width: 4),
-              _IconButton(
-                icon: Icons.edit_outlined,
-                tooltip: 'Edit',
-                onPressed: () => _showEditDialog(context, ref, selected),
-              ),
-              _IconButton(
-                icon: Icons.delete_outline,
-                tooltip: 'Delete',
-                onPressed: () => _confirmDelete(context, ref, selected),
-              ),
-            ],
-            const SizedBox(width: 8),
-            FilledButton.tonalIcon(
-              onPressed: () => _browseAndAdd(ref),
-              icon: const Icon(Icons.folder_open, size: 18),
-              label: const Text('Browse'),
-            ),
-          ],
+    return LoadoutSlot(
+      ordinal: 'I',
+      label: 'Source Port',
+      icon: Icons.memory,
+      emptyHint: portsAsync.isLoading
+          ? 'Reading saved ports…'
+          : 'No engine seated',
+      value: selected?.name,
+      detail: selected?.executablePath,
+      // Checked here rather than only at launch, so a port that has been
+      // moved or uninstalled reads as broken instead of looking seated.
+      problem: selected == null
+          ? null
+          : ref.watch(portProblemProvider(selected.executablePath)).valueOrNull,
+      onTap: () => _pick(context, ref, ports, selected),
+      actions: [
+        if (selected != null) ...[
+          SlotAction(
+            icon: Icons.tune,
+            tooltip: 'Edit port',
+            onPressed: () => _showEditDialog(context, ref, selected),
+          ),
+          SlotAction(
+            icon: Icons.delete_outline,
+            tooltip: 'Remove port',
+            onPressed: () => _confirmDelete(context, ref, selected),
+          ),
+        ],
+        SlotAction(
+          icon: Icons.folder_open,
+          tooltip: 'Browse for an executable',
+          tint: AppColors.primary,
+          onPressed: () => _browseAndAdd(ref),
         ),
       ],
     );
   }
 
+  Future<void> _pick(
+    BuildContext context,
+    WidgetRef ref,
+    List<SourcePort> ports,
+    SourcePort? selected,
+  ) async {
+    final choice = await showSlotPicker<SourcePort>(
+      context: context,
+      title: 'Source Port',
+      entries: [
+        for (final p in ports)
+          SlotEntry(
+            value: p,
+            label: p.name,
+            detail: p.executablePath,
+            selected: p.id == selected?.id,
+          ),
+      ],
+      emptyLabel: 'No saved ports yet.',
+      browseLabel: 'Browse for an executable…',
+    );
+
+    if (choice == null) return;
+    if (choice.browse) {
+      await _browseAndAdd(ref);
+    } else if (choice.value != null) {
+      ref.read(launchNotifierProvider.notifier).setSourcePort(choice.value!);
+    }
+  }
+
   Future<void> _browseAndAdd(WidgetRef ref) async {
-    final path = await FilePickerService().pickFile(
-      allowedExtensions: ['exe', 'AppImage', ''],
+    final path = await FilePickerService().pickExecutable(
       dialogTitle: 'Select Source Port Executable',
     );
     if (path == null) return;
@@ -148,8 +131,7 @@ class SourcePortSelector extends ConsumerWidget {
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.folder_open, size: 18),
                   onPressed: () async {
-                    final p = await FilePickerService().pickFile(
-                      allowedExtensions: ['exe', 'AppImage', ''],
+                    final p = await FilePickerService().pickExecutable(
                       dialogTitle: 'Select Source Port Executable',
                     );
                     if (p != null) pathCtrl.text = p;
@@ -204,32 +186,12 @@ class SourcePortSelector extends ConsumerWidget {
               ref.read(launchNotifierProvider.notifier).clearSourcePort();
               if (ctx.mounted) Navigator.of(ctx).pop();
             },
-            child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _IconButton extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  const _IconButton({required this.icon, required this.tooltip, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(4),
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Icon(icon, size: 18, color: Theme.of(context).colorScheme.onSurface.withAlpha(180)),
-        ),
       ),
     );
   }

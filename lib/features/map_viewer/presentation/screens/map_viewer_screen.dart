@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/widgets/doom_button.dart';
+import '../../../../domain/entities/warp_target.dart';
+import '../../../launcher/presentation/providers/launch_provider.dart';
+import '../../../main/presentation/screens/main_screen.dart';
 import '../../../../core/services/file_picker_service.dart';
 import '../../data/repositories/wad_repository.dart';
 import '../../domain/models/doom_map.dart';
@@ -9,17 +14,18 @@ import '../widgets/doom_map_viewer.dart';
 import '../widgets/hologram_map_viewer.dart';
 import '../widgets/hologram_painter.dart';
 import '../widgets/map_geometry.dart';
+import '../widgets/map_strip.dart';
 
 /// Opens a WAD and browses its maps, either as a flat plan or as the
 /// holographic projection.
-class MapViewerScreen extends StatefulWidget {
+class MapViewerScreen extends ConsumerStatefulWidget {
   const MapViewerScreen({super.key});
 
   @override
-  State<MapViewerScreen> createState() => _MapViewerScreenState();
+  ConsumerState<MapViewerScreen> createState() => _MapViewerScreenState();
 }
 
-class _MapViewerScreenState extends State<MapViewerScreen> {
+class _MapViewerScreenState extends ConsumerState<MapViewerScreen> {
   final _repository = WadRepository();
   final _filePicker = FilePickerService();
   final _hologramKey = GlobalKey<HologramMapViewerState>();
@@ -32,6 +38,21 @@ class _MapViewerScreenState extends State<MapViewerScreen> {
   String? _error;
   bool _loading = false;
   String? _sourceName;
+  String? _sourcePath;
+
+  /// Seats the map on the bench and moves to it.
+  ///
+  /// The viewer knows the map and the file it came from; the launcher knows
+  /// how to run them. This is the only thing that joined them.
+  void _launchHere() {
+    final map = _current;
+    if (map == null) return;
+
+    ref.read(launchNotifierProvider.notifier).setWarp(
+          WarpTarget(mapName: map.name, sourcePath: _sourcePath),
+        );
+    ref.read(currentTabProvider.notifier).state = AppTab.launcher;
+  }
 
   Future<void> _openWad() async {
     String? picked;
@@ -64,6 +85,7 @@ class _MapViewerScreenState extends State<MapViewerScreen> {
         _maps = maps;
         _current = maps.isNotEmpty ? maps.first : null;
         _sourceName = path.split(RegExp(r'[/\\]')).last;
+        _sourcePath = path;
         _loading = false;
         if (maps.isEmpty) _error = 'No maps found in this file.';
       });
@@ -88,6 +110,8 @@ class _MapViewerScreenState extends State<MapViewerScreen> {
             loading: _loading,
             mode: _mode,
             hasMap: _current != null,
+            mapName: _current?.name,
+            onLaunchHere: _launchHere,
             onOpen: _openWad,
             onModeChanged: (mode) => setState(() => _mode = mode),
             onReset: () => _hologramKey.currentState?.resetView(),
@@ -112,7 +136,7 @@ class _MapViewerScreenState extends State<MapViewerScreen> {
             ),
           if (_maps != null && _maps!.length > 1) ...[
             const SizedBox(height: 12),
-            _MapStrip(
+            MapStrip(
               maps: _maps!,
               current: _current,
               onSelected: (map) => setState(() {
@@ -194,6 +218,8 @@ class _Header extends StatelessWidget {
   final bool loading;
   final MapViewMode mode;
   final bool hasMap;
+  final String? mapName;
+  final VoidCallback onLaunchHere;
   final VoidCallback onOpen;
   final ValueChanged<MapViewMode> onModeChanged;
   final VoidCallback onReset;
@@ -203,6 +229,8 @@ class _Header extends StatelessWidget {
     required this.loading,
     required this.mode,
     required this.hasMap,
+    required this.mapName,
+    required this.onLaunchHere,
     required this.onOpen,
     required this.onModeChanged,
     required this.onReset,
@@ -229,6 +257,13 @@ class _Header extends StatelessWidget {
         ),
         const Spacer(),
         if (hasMap) ...[
+          DoomButton(
+            label: 'Launch ${mapName ?? ''}'.trim(),
+            icon: Icons.play_arrow,
+            variant: DoomButtonVariant.primary,
+            onPressed: onLaunchHere,
+          ),
+          const SizedBox(width: 10),
           _ModeSwitch(mode: mode, onChanged: onModeChanged),
           const SizedBox(width: 8),
           if (mode == MapViewMode.hologram)
@@ -317,62 +352,6 @@ class _ModeSwitch extends StatelessWidget {
           segment(MapViewMode.hologram, Icons.view_in_ar_outlined, '3D'),
           segment(MapViewMode.plan, Icons.grid_on_outlined, 'Plan'),
         ],
-      ),
-    );
-  }
-}
-
-class _MapStrip extends StatelessWidget {
-  final List<DoomMap> maps;
-  final DoomMap? current;
-  final ValueChanged<DoomMap> onSelected;
-
-  const _MapStrip({
-    required this.maps,
-    required this.current,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 34,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: maps.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final map = maps[index];
-          final selected = identical(map, current);
-
-          return InkWell(
-            onTap: () => onSelected(map),
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: selected
-                    ? AppColors.primary.withValues(alpha: 0.18)
-                    : Colors.transparent,
-                border: Border.all(
-                  color: selected
-                      ? AppColors.primary.withValues(alpha: 0.6)
-                      : Theme.of(context).dividerColor,
-                ),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                map.name,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                  color: selected ? AppColors.primary : null,
-                ),
-              ),
-            ),
-          );
-        },
       ),
     );
   }

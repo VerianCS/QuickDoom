@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import '../../domain/models/doom_map.dart';
+import '../../domain/models/map_order.dart';
 import '../../domain/models/wad_file.dart';
 import '../../domain/parsers/doom_map_parser.dart';
 import '../../domain/parsers/wad_parser.dart';
@@ -21,11 +22,14 @@ class WadRepository {
 
   /// Parses already-read bytes, dispatching to the PK3 reader when the path
   /// extension or the zip signature indicates a compressed container.
+  ///
+  /// Maps come back in level order rather than the order they happen to sit in
+  /// the container, which for PWADs is the order they were authored in.
   List<DoomMap> parseBytes(String path, Uint8List bytes) {
-    if (_isZipContainer(path, bytes)) {
-      return Pk3Reader.parseBytes(bytes);
-    }
-    return DoomMapParser.parseAll(WadParser.parseBytes(bytes));
+    final maps = _isZipContainer(path, bytes)
+        ? Pk3Reader.parseBytes(bytes)
+        : DoomMapParser.parseAll(WadParser.parseBytes(bytes));
+    return MapOrder.sorted(maps);
   }
 
   static bool _isZipContainer(String path, Uint8List bytes) {

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_fonts.dart';
+
 import '../../../console/presentation/widgets/console_panel.dart';
 import '../../../launcher/presentation/screens/launcher_screen.dart';
 import '../../../mod_browser/presentation/screens/mod_browser_screen.dart';
@@ -21,7 +24,10 @@ class MainScreen extends ConsumerWidget {
     final tab = ref.watch(currentTabProvider);
 
     return Scaffold(
+      // Stretch, or the nav bar shrink-wraps its tabs and a Column centres it,
+      // leaving the tab strip floating in the middle of the window.
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _NavBar(tab: tab),
           Expanded(
@@ -52,20 +58,26 @@ class _NavBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(
+          bottom: BorderSide(color: AppColors.dividerColor),
+        ),
       ),
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
             for (final t in AppTab.values)
-              _NavTab(
-                icon: _iconFor(t),
-                label: _labelFor(t),
-                selected: t == tab,
-                onTap: () => ref.read(currentTabProvider.notifier).state = t,
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: _NavTab(
+                  icon: _iconFor(t),
+                  label: _labelFor(t),
+                  selected: t == tab,
+                  onTap: () => ref.read(currentTabProvider.notifier).state = t,
+                ),
               ),
           ],
         ),
@@ -92,7 +104,11 @@ class _NavBar extends ConsumerWidget {
   };
 }
 
-class _NavTab extends StatelessWidget {
+/// A nav slot.
+///
+/// The active tab is backlit and seated into the bar rather than underlined:
+/// an underline is a web tab, a lit slot reads as a switch on a console.
+class _NavTab extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool selected;
@@ -106,41 +122,130 @@ class _NavTab extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final color = selected
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.onSurface.withAlpha(153);
+  State<_NavTab> createState() => _NavTabState();
+}
 
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: selected
-            ? BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
+class _NavTabState extends State<_NavTab> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = widget.selected;
+    final foreground = selected
+        ? AppColors.primary
+        : _hovered
+            ? AppColors.onSurface
+            : AppColors.onBackground;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: AppMotion.medium,
+          curve: AppMotion.standard,
+          decoration: BoxDecoration(
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.28),
+                      blurRadius: 18,
+                    ),
+                  ]
+                : const [],
+          ),
+          child: CustomPaint(
+            painter: _NavSlotPainter(selected: selected, hovered: _hovered),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 11),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(widget.icon, size: 15, color: foreground),
+                  const SizedBox(width: 7),
+                  Text(
+                    widget.label.toUpperCase(),
+                    style: TextStyle(
+                      fontFamily: AppFonts.doomText,
+                      fontSize: 12,
+                      letterSpacing: 1.3,
+                      color: foreground,
+                    ),
                   ),
-                ),
-              )
-            : null,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                color: color,
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _NavSlotPainter extends CustomPainter {
+  final bool selected;
+  final bool hovered;
+
+  const _NavSlotPainter({required this.selected, required this.hovered});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Only the top corners are cut: the slot sits on the bar's bottom edge, so
+    // cutting the bottom would float it.
+    final cut = AppShape.notchSmall;
+    final path = Path()
+      ..moveTo(cut, 0)
+      ..lineTo(size.width - cut, 0)
+      ..lineTo(size.width, cut)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..lineTo(0, cut)
+      ..close();
+
+    if (selected) {
+      canvas.drawPath(
+        path,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [
+              AppColors.primary.withValues(alpha: 0.30),
+              AppColors.primary.withValues(alpha: 0.07),
+            ],
+          ).createShader(Offset.zero & size),
+      );
+    } else if (hovered) {
+      canvas.drawPath(
+        path,
+        Paint()..color = AppColors.surfaceHigh,
+      );
+    }
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = selected
+            ? AppColors.primary.withValues(alpha: 0.75)
+            : hovered
+                ? AppColors.dividerColor
+                : Colors.transparent,
+    );
+
+    // The lit filament along the bottom of the active slot.
+    if (selected) {
+      canvas.drawRect(
+        Rect.fromLTWH(1, size.height - 2, size.width - 2, 2),
+        Paint()..color = AppColors.primary,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_NavSlotPainter oldDelegate) =>
+      oldDelegate.selected != selected || oldDelegate.hovered != hovered;
 }

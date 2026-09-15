@@ -10,6 +10,7 @@ import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 import 'widgets/custom_title_bar.dart';
 import '../features/splash/presentation/widgets/boot_splash.dart';
+import '../features/launcher/presentation/widgets/launch_sequence_overlay.dart';
 import '../data/models/iwad_model.dart';
 import '../data/models/launch_profile_model.dart';
 import '../data/models/pwad_model.dart';
@@ -68,6 +69,11 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
     }
     _focusNode.requestFocus();
   }
+
+  /// True when the platform asks for reduced motion, which collapses the
+  /// launch sequence instead of playing it.
+  static bool _reduceMotion(BuildContext context) =>
+      MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
   void _setStatus(String status) {
     if (mounted) setState(() => _status = status);
@@ -173,7 +179,9 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
         SingleActivator(LogicalKeyboardKey.keyL, control: true): () {
           final state = ref.read(launchNotifierProvider);
           if (state.canLaunch) {
-            ref.read(launchNotifierProvider.notifier).launch();
+            ref.read(launchNotifierProvider.notifier).launch(
+                  animate: !_reduceMotion(context),
+                );
           }
         },
         SingleActivator(LogicalKeyboardKey.keyN, control: true): () {
@@ -183,13 +191,20 @@ class _BootPipelineState extends ConsumerState<_BootPipeline> {
       child: Focus(
         focusNode: _focusNode,
         autofocus: true,
-        child: Column(
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            Material(
-              color: AppColors.titleBar,
-              child: const CustomTitleBar(),
+            Column(
+              children: [
+                Material(
+                  color: AppColors.titleBar,
+                  child: const CustomTitleBar(),
+                ),
+                Expanded(child: widget.child),
+              ],
             ),
-            Expanded(child: widget.child),
+            // Above the title bar as well: the takeover owns the whole window.
+            const LaunchSequenceOverlay(),
           ],
         ),
       ),

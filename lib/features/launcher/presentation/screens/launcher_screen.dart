@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
-import '../../../../core/services/file_picker_service.dart';
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_fonts.dart';
+import '../../../../app/widgets/doom_button.dart';
+import '../../../../app/widgets/notched_panel.dart';
+import '../../../../app/widgets/section_rule.dart';
 import '../../../../core/services/hive_service.dart';
 import '../../../../data/repositories/iwad_repository_impl.dart';
 import '../../../../data/repositories/profile_repository_impl.dart';
 import '../../../../data/repositories/source_port_repository_impl.dart';
 import '../../../../domain/entities/iwad.dart';
-import '../../../../domain/entities/pwad.dart';
 import '../../../../domain/entities/source_port.dart';
 import '../../../profiles/presentation/providers/profile_provider.dart';
 import '../../../profiles/presentation/widgets/profile_list_sidebar.dart';
 import '../../../wads/presentation/widgets/wad_drop_zone.dart';
 import '../providers/launch_provider.dart';
 import '../widgets/iwad_selector.dart';
+import '../widgets/pwad_rail.dart';
 import '../widgets/quick_launch_bar.dart';
 import '../widgets/source_port_dropdown.dart';
+import '../widgets/gameplay_panel.dart';
+import '../widgets/warp_plate.dart';
 
 class LauncherScreen extends ConsumerStatefulWidget {
   const LauncherScreen({super.key});
@@ -27,6 +32,14 @@ class LauncherScreen extends ConsumerStatefulWidget {
 }
 
 class _LauncherScreenState extends ConsumerState<LauncherScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // The bench is rebuilt from what was on it when the app closed. Without
+    // this every restart started from two empty sockets.
+    ref.read(launchNotifierProvider.notifier).restore();
+  }
+
   Future<void> _loadProfile(WidgetRef ref, String profileId) async {
     final profileRepo = ProfileRepositoryImpl(HiveService());
     final profile = await profileRepo.getProfile(profileId);
@@ -78,66 +91,58 @@ class _LauncherScreenState extends ConsumerState<LauncherScreen> {
       autofocus: true,
       child: CallbackShortcuts(
         bindings: {
-          SingleActivator(LogicalKeyboardKey.keyL, control: true): () {
+          const SingleActivator(LogicalKeyboardKey.keyL, control: true): () {
             if (state.canLaunch && !state.isLaunching) {
               ref.read(launchNotifierProvider.notifier).launch();
             }
           },
-          SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
+          const SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
             if (currentProfileId != null) _saveToProfile(ref);
           },
         },
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const ProfileListSidebar(),
                   Expanded(
                     child: WadDropZone(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Text(
-                                  'Launch Configuration',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const Spacer(),
-                                if (currentProfileId != null)
-                                  TextButton.icon(
-                                    onPressed: () => _saveToProfile(ref),
-                                    icon: const Icon(Icons.save, size: 18),
-                                    label: const Text('Save'),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            Expanded(
-                              child: ListView(
-                                children: [
-                                  const SourcePortSelector(),
-                                  const SizedBox(height: 20),
-                                  const IwadSelector(),
-                                  const SizedBox(height: 20),
-                                  _CustomArgsField(),
-                                  const SizedBox(height: 20),
-                                  _PwadSection(),
-                                  if (state.error != null) ...[
-                                    const SizedBox(height: 16),
-                                    _ErrorBanner(message: state.error!),
-                                  ],
-                                ],
-                              ),
-                            ),
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+                        children: [
+                          _BenchHeader(
+                            profileId: currentProfileId,
+                            onSave: () => _saveToProfile(ref),
+                          ),
+                          const SizedBox(height: 16),
+                          const WarpPlate(),
+                          const SectionRule(
+                            label: 'Engine & Game',
+                            note: 'both required',
+                          ),
+                          const SizedBox(height: 10),
+                          const SourcePortSelector(),
+                          const SizedBox(height: 8),
+                          const IwadSelector(),
+                          const SizedBox(height: 20),
+                          const GameplayPanel(),
+                          const SizedBox(height: 20),
+                          const PwadRail(),
+                          const SizedBox(height: 20),
+                          const SectionRule(
+                            label: 'Arguments',
+                            note: 'appended to the command line',
+                          ),
+                          const SizedBox(height: 10),
+                          _CustomArgsField(),
+                          if (state.error != null) ...[
+                            const SizedBox(height: 16),
+                            _ErrorBanner(message: state.error!),
                           ],
-                        ),
+                        ],
                       ),
                     ),
                   ),
@@ -147,7 +152,9 @@ class _LauncherScreenState extends ConsumerState<LauncherScreen> {
             QuickLaunchBar(
               canLaunch: state.canLaunch,
               isLaunching: state.isLaunching,
-              onLaunch: () => ref.read(launchNotifierProvider.notifier).launch(),
+              onLaunch: ({required bool animate}) => ref
+                  .read(launchNotifierProvider.notifier)
+                  .launch(animate: animate),
             ),
           ],
         ),
@@ -185,150 +192,35 @@ class _LauncherScreenState extends ConsumerState<LauncherScreen> {
   }
 }
 
-class _PwadSection extends ConsumerWidget {
+/// The bench title, and the save control for whichever profile is seated.
+class _BenchHeader extends StatelessWidget {
+  final String? profileId;
+  final VoidCallback onSave;
+
+  const _BenchHeader({required this.profileId, required this.onSave});
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pwads = ref.watch(launchNotifierProvider.select((s) => s.pwads));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    return Row(
       children: [
-        Row(
-          children: [
-            const Text('PWADs / Mods',
-                style: TextStyle(fontWeight: FontWeight.w600)),
-            const Spacer(),
-            Text(
-              '${pwads.length} loaded',
-              style: TextStyle(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withAlpha(128),
-                fontSize: 12,
-              ),
+        const Expanded(
+          child: Text(
+            'LOADOUT',
+            style: TextStyle(
+              fontFamily: AppFonts.doomLeft,
+              fontSize: 26,
+              letterSpacing: 3,
+              color: AppColors.onSurface,
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (pwads.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: Theme.of(context).dividerColor,
-                style: BorderStyle.solid,
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(
-                'No mods loaded. Click "+" or drag-and-drop WAD/PK3 files.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withAlpha(128),
-                ),
-              ),
-            ),
-          )
-        else
-          ReorderableListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: pwads.length,
-            onReorder: (oldIndex, newIndex) =>
-                ref.read(launchNotifierProvider.notifier).reorderPwad(
-                      oldIndex,
-                      newIndex,
-                    ),
-            proxyDecorator: (child, index, animation) =>
-                Material(elevation: 4, child: child),
-            itemBuilder: (context, index) {
-              final pwad = pwads[index];
-              final fileName = pwad.path.split('\\').last.split('/').last;
-              return ListTile(
-                key: ValueKey(pwad.id),
-                leading: InkWell(
-                  onTap: () =>
-                      ref.read(launchNotifierProvider.notifier).togglePwad(
-                            pwad.id,
-                          ),
-                  child: Icon(
-                    pwad.isEnabled
-                        ? Icons.check_box
-                        : Icons.check_box_outline_blank,
-                    color: pwad.isEnabled
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withAlpha(80),
-                    size: 20,
-                  ),
-                ),
-                title: Text(
-                  fileName,
-                  style: TextStyle(
-                    color: pwad.isEnabled
-                        ? null
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withAlpha(80),
-                  ),
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: () =>
-                      ref.read(launchNotifierProvider.notifier).removePwad(
-                            pwad.id,
-                          ),
-                ),
-              );
-            },
           ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            OutlinedButton.icon(
-              onPressed: () async {
-                final paths = await _pickPwadFiles();
-                if (paths.isNotEmpty) {
-                  final newPwads = paths
-                      .map((path) => Pwad(
-                            id: const Uuid().v4(),
-                            path: path,
-                          ))
-                      .toList();
-                  ref
-                      .read(launchNotifierProvider.notifier)
-                      .addPwads(newPwads);
-                }
-              },
-              icon: const Icon(Icons.add, size: 18),
-
-              label: const Text('Add WAD Files'),
-
-            ),
-            const SizedBox(width: 8),
-            Icon(
-              Icons.cloud_download_outlined,
-              size: 16,
-              color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              'Drop files anywhere',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
-              ),
-            ),
-          ],
         ),
+        if (profileId != null)
+          DoomButton(
+            label: 'Save',
+            icon: Icons.save_outlined,
+            hint: 'CTRL+S',
+            onPressed: onSave,
+          ),
       ],
     );
   }
@@ -345,7 +237,8 @@ class _CustomArgsFieldState extends ConsumerState<_CustomArgsField> {
   @override
   void initState() {
     super.initState();
-    _controller.text = ref.read(launchNotifierProvider.select((s) => s.customArgs));
+    _controller.text =
+        ref.read(launchNotifierProvider.select((s) => s.customArgs));
   }
 
   @override
@@ -365,17 +258,23 @@ class _CustomArgsFieldState extends ConsumerState<_CustomArgsField> {
       }
     });
 
-    final customArgs = ref.watch(launchNotifierProvider.select((s) => s.customArgs));
+    final customArgs =
+        ref.watch(launchNotifierProvider.select((s) => s.customArgs));
 
     return TextField(
       controller: _controller,
-      onChanged: (value) => ref.read(launchNotifierProvider.notifier).setCustomArgs(value),
+      style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+      onChanged: (value) =>
+          ref.read(launchNotifierProvider.notifier).setCustomArgs(value),
       decoration: InputDecoration(
-        labelText: 'Custom Arguments',
         hintText: '-skill 4 -fast -nomonsters',
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        hintStyle: const TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 13,
+          color: AppColors.onSurfaceFaint,
+        ),
         isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         suffixIcon: customArgs.isNotEmpty
             ? IconButton(
                 icon: const Icon(Icons.clear, size: 16),
@@ -392,45 +291,27 @@ class _CustomArgsFieldState extends ConsumerState<_CustomArgsField> {
 
 class _ErrorBanner extends StatelessWidget {
   final String message;
+
   const _ErrorBanner({required this.message});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.error.withAlpha(25),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.error.withAlpha(76),
-        ),
-        borderRadius: BorderRadius.circular(8),
-      ),
+    return NotchedPanel(
+      background: AppColors.surface,
+      borderColor: AppColors.error.withValues(alpha: 0.55),
       child: Row(
         children: [
-          Icon(
-            Icons.error_outline,
-            color: Theme.of(context).colorScheme.error,
-            size: 20,
-          ),
+          const Icon(Icons.warning_amber_rounded,
+              color: AppColors.error, size: 19),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
-              ),
+              style: const TextStyle(color: AppColors.error, fontSize: 13),
             ),
           ),
         ],
       ),
     );
   }
-}
-
-Future<List<String>> _pickPwadFiles() async {
-  final service = FilePickerService();
-  return service.pickMultipleFiles(
-    allowedExtensions: ['wad', 'pk3', 'pk7', 'ipk3', 'ipk7', 'deh', 'bex', 'zip'],
-    dialogTitle: 'Select Mod Files',
-  );
 }

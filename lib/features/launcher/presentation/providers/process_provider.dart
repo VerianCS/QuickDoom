@@ -9,10 +9,15 @@ class RunningProcess {
   final String executable;
   final List<String> args;
 
+  /// When the process was spawned, so the session readout can report how long
+  /// the game was actually up.
+  final DateTime startedAt;
+
   const RunningProcess({
     required this.result,
     required this.executable,
     required this.args,
+    required this.startedAt,
   });
 }
 
