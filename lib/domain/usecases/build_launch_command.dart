@@ -1,5 +1,6 @@
 import '../entities/iwad.dart';
 import '../entities/launch_profile.dart';
+import '../entities/gameplay_options.dart';
 import '../entities/source_port.dart';
 import '../entities/warp_target.dart';
 
@@ -9,6 +10,7 @@ class BuildLaunchCommand {
     required SourcePort port,
     required Iwad iwad,
     WarpTarget? warp,
+    GameplayOptions gameplay = const GameplayOptions(),
   }) {
     final args = <String>[];
 
@@ -29,6 +31,7 @@ class BuildLaunchCommand {
     // Before the custom args, so anything typed by hand still has the last
     // word over a map picked in the viewer.
     if (warp != null) args.addAll(warp.toArgs());
+    args.addAll(gameplay.toArgs());
 
     args.addAll(tokenize(profile.customArgs));
 

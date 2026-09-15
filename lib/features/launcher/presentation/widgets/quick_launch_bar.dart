@@ -6,6 +6,7 @@ import '../../../../app/theme/app_fonts.dart';
 import '../../../../app/widgets/notched_panel.dart';
 import '../providers/launch_provider.dart';
 import '../providers/launch_sequence_provider.dart';
+import '../providers/path_problem_provider.dart';
 
 /// The anchor of the launcher: a wide plate that lights when the bench is
 /// loaded and the app is actually able to fire.
@@ -106,9 +107,22 @@ class _Readiness extends ConsumerWidget {
       if (state.iwad == null) 'an IWAD',
     ];
 
-    final (text, colour) = missing.isEmpty
-        ? ('Ready to fire', AppColors.success)
-        : ('Seat ${missing.join(' and ')} to arm', AppColors.onSurfaceFaint);
+    // A seated file can still be gone. Without this the slot showed the
+    // warning while the plate underneath it went on saying "Ready to fire",
+    // and the anchor is the thing people read.
+    final broken = <String>[
+      if (state.sourcePort != null &&
+          ref
+                  .watch(portProblemProvider(state.sourcePort!.executablePath))
+                  .valueOrNull !=
+              null)
+        'source port',
+      if (state.iwad != null &&
+          ref.watch(iwadProblemProvider(state.iwad!.path)).valueOrNull != null)
+        'IWAD',
+    ];
+
+    final (text, colour) = readinessLine(missing: missing, broken: broken);
 
     return Row(
       children: [
@@ -129,6 +143,28 @@ class _Readiness extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// What the plate says about the bench.
+///
+/// Pulled out of the widget because the interesting cases are all about which
+/// sentence wins: a file that is seated but gone used to lose to "Ready to
+/// fire", so the slot showed a warning while the plate invited a launch.
+@visibleForTesting
+(String, Color) readinessLine({
+  required List<String> missing,
+  required List<String> broken,
+}) {
+  if (missing.isNotEmpty) {
+    return ('Seat ${missing.join(' and ')} to arm', AppColors.onSurfaceFaint);
+  }
+  if (broken.isNotEmpty) {
+    return (
+      'The ${broken.join(' and ')} cannot be run — check the slot above',
+      AppColors.caution,
+    );
+  }
+  return ('Ready to fire', AppColors.success);
 }
 
 class _LaunchPlate extends StatefulWidget {

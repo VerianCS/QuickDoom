@@ -7,6 +7,7 @@ import '../../../../core/services/file_picker_service.dart';
 import '../../../../domain/entities/iwad.dart';
 import '../../../iwads/presentation/providers/iwad_provider.dart';
 import '../providers/launch_provider.dart';
+import '../providers/path_problem_provider.dart';
 import 'loadout_slot.dart';
 import 'slot_picker.dart';
 
@@ -28,6 +29,9 @@ class IwadSelector extends ConsumerWidget {
           iwadsAsync.isLoading ? 'Reading saved IWADs\u2026' : 'No game seated',
       value: selected?.name,
       detail: selected?.path,
+      problem: selected == null
+          ? null
+          : ref.watch(iwadProblemProvider(selected.path)).valueOrNull,
       onTap: () => _pick(context, ref, iwads, selected),
       actions: [
         if (selected != null) ...[

@@ -4,12 +4,52 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:quickdoom/domain/entities/iwad.dart';
 import 'package:quickdoom/domain/entities/source_port.dart';
 import 'package:quickdoom/features/launcher/presentation/providers/launch_provider.dart';
+import 'package:quickdoom/app/theme/app_colors.dart';
 import 'package:quickdoom/features/launcher/presentation/widgets/quick_launch_bar.dart';
 
 const _port = SourcePort(id: 'p', name: 'gzdoom', executablePath: '/opt/gzdoom');
 const _iwad = Iwad(id: 'i', name: 'doom2.wad', path: '/wads/doom2.wad');
 
 void main() {
+  group('readinessLine', () {
+    test('a full, healthy bench is ready', () {
+      expect(
+        readinessLine(missing: const [], broken: const []).$1,
+        'Ready to fire',
+      );
+    });
+
+    // The slot showed a warning while the plate under it still said "Ready to
+    // fire", and the plate is what people read before pressing it.
+    test('a seated file that cannot be run is not "ready"', () {
+      final (text, colour) =
+          readinessLine(missing: const [], broken: const ['source port']);
+
+      expect(text, contains('cannot be run'));
+      expect(colour, AppColors.caution);
+    });
+
+    test('an empty socket outranks a broken one, because it comes first', () {
+      expect(
+        readinessLine(
+          missing: const ['an IWAD'],
+          broken: const ['source port'],
+        ).$1,
+        'Seat an IWAD to arm',
+      );
+    });
+
+    test('both broken files are named', () {
+      expect(
+        readinessLine(
+          missing: const [],
+          broken: const ['source port', 'IWAD'],
+        ).$1,
+        contains('source port and IWAD'),
+      );
+    });
+  });
+
   Future<void> pumpBar(
     WidgetTester tester, {
     SourcePort? port,

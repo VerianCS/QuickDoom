@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/services/file_problem.dart';
 import '../../../../app/theme/app_fonts.dart';
 import '../../../../app/widgets/notched_panel.dart';
 
@@ -33,6 +34,10 @@ class LoadoutSlot extends StatefulWidget {
   /// Controls at the right-hand end of the plate.
   final List<Widget> actions;
 
+  /// What is wrong with what is seated here — a file that has been moved, or
+  /// one that is not executable. Shown in place of the path.
+  final String? problem;
+
   const LoadoutSlot({
     super.key,
     required this.ordinal,
@@ -43,6 +48,7 @@ class LoadoutSlot extends StatefulWidget {
     this.detail,
     this.onTap,
     this.actions = const [],
+    this.problem,
   });
 
   /// The tail of a path, which is the part that identifies it.
@@ -66,6 +72,7 @@ class _LoadoutSlotState extends State<LoadoutSlot> {
   @override
   Widget build(BuildContext context) {
     final loaded = widget.value != null;
+    final broken = loaded && widget.problem != null;
 
     return MouseRegion(
       cursor: widget.onTap == null
@@ -74,7 +81,11 @@ class _LoadoutSlotState extends State<LoadoutSlot> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: CustomPaint(
-        painter: _SocketPainter(loaded: loaded, hovered: _hovered),
+        painter: _SocketPainter(
+          loaded: loaded,
+          hovered: _hovered,
+          broken: broken,
+        ),
         child: Row(
           children: [
             Expanded(
@@ -88,11 +99,13 @@ class _LoadoutSlotState extends State<LoadoutSlot> {
                       _OrdinalRail(ordinal: widget.ordinal, lit: loaded),
                       const SizedBox(width: 12),
                       Icon(
-                        widget.icon,
+                        broken ? Icons.warning_amber_rounded : widget.icon,
                         size: 17,
-                        color: loaded
-                            ? AppColors.primary
-                            : AppColors.onSurfaceFaint,
+                        color: broken
+                            ? AppColors.caution
+                            : loaded
+                                ? AppColors.primary
+                                : AppColors.onSurfaceFaint,
                       ),
                       const SizedBox(width: 11),
                       Expanded(
@@ -117,12 +130,28 @@ class _LoadoutSlotState extends State<LoadoutSlot> {
                               style: TextStyle(
                                 fontSize: 15,
                                 height: 1.1,
-                                color: loaded
-                                    ? AppColors.onSurface
-                                    : AppColors.onSurfaceFaint,
+                                color: broken
+                                    ? AppColors.caution
+                                    : loaded
+                                        ? AppColors.onSurface
+                                        : AppColors.onSurfaceFaint,
                               ),
                             ),
-                            if (loaded && widget.detail != null) ...[
+                            if (broken) ...[
+                              const SizedBox(height: 3),
+                              Tooltip(
+                                message: widget.problem!,
+                                child: Text(
+                                  FileProblem.summarise(widget.problem!),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 10.5,
+                                    color: AppColors.caution,
+                                  ),
+                                ),
+                              ),
+                            ] else if (loaded && widget.detail != null) ...[
                               const SizedBox(height: 3),
                               Text(
                                 LoadoutSlot.shortenPath(widget.detail!),
@@ -190,8 +219,13 @@ class _OrdinalRail extends StatelessWidget {
 class _SocketPainter extends CustomPainter {
   final bool loaded;
   final bool hovered;
+  final bool broken;
 
-  const _SocketPainter({required this.loaded, required this.hovered});
+  const _SocketPainter({
+    required this.loaded,
+    required this.hovered,
+    this.broken = false,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -229,11 +263,13 @@ class _SocketPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1
-        ..color = hovered
-            ? AppColors.primary.withValues(alpha: 0.6)
-            : loaded
-                ? AppColors.dividerColor
-                : AppColors.primary.withValues(alpha: 0.35),
+        ..color = broken
+            ? AppColors.caution.withValues(alpha: 0.7)
+            : hovered
+                ? AppColors.primary.withValues(alpha: 0.6)
+                : loaded
+                    ? AppColors.dividerColor
+                    : AppColors.primary.withValues(alpha: 0.35),
     );
 
     // The crimson baseline: present on an open socket, and lit along its whole
@@ -241,15 +277,19 @@ class _SocketPainter extends CustomPainter {
     canvas.drawRect(
       Rect.fromLTWH(0, size.height - 2, loaded ? size.width - AppShape.notch : size.width * 0.34, 2),
       Paint()
-        ..color = loaded
-            ? AppColors.primary.withValues(alpha: 0.55)
-            : AppColors.primary,
+        ..color = broken
+            ? AppColors.caution
+            : loaded
+                ? AppColors.primary.withValues(alpha: 0.55)
+                : AppColors.primary,
     );
   }
 
   @override
   bool shouldRepaint(_SocketPainter oldDelegate) =>
-      oldDelegate.loaded != loaded || oldDelegate.hovered != hovered;
+      oldDelegate.loaded != loaded ||
+      oldDelegate.hovered != hovered ||
+      oldDelegate.broken != broken;
 }
 
 /// A small square control seated at the end of a slot.

@@ -1,12 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../data/repositories/iwad_repository_impl.dart';
+import '../../../../core/services/hive_service.dart';
+import '../../../../data/repositories/source_port_repository_impl.dart';
+import '../../../../domain/entities/gameplay_options.dart';
 import '../../../../domain/entities/iwad.dart';
 import '../../../../domain/entities/launch_profile.dart';
 import '../../../../domain/entities/pwad.dart';
 import '../../../../domain/entities/source_port.dart';
 import '../../../../domain/entities/warp_target.dart';
 import '../../../../domain/usecases/build_launch_command.dart';
+import '../../data/loadout_store.dart';
 import '../../domain/launch_sequence.dart';
 import 'launch_sequence_provider.dart';
 
@@ -24,6 +31,8 @@ class LaunchState {
   /// The map to start on, set from the map viewer.
   final WarpTarget? warp;
 
+  final GameplayOptions gameplay;
+
   const LaunchState({
     this.sourcePort,
     this.iwad,
@@ -33,6 +42,7 @@ class LaunchState {
     this.error,
     this.launchSuccess = false,
     this.warp,
+    this.gameplay = const GameplayOptions(),
   });
 
   LaunchState copyWith({
@@ -44,18 +54,25 @@ class LaunchState {
     String? error,
     bool? launchSuccess,
     WarpTarget? warp,
+    GameplayOptions? gameplay,
     bool clearError = false,
     bool clearWarp = false,
+    // Explicit flags, because `sourcePort ?? this.sourcePort` cannot tell
+    // "leave it alone" from "clear it": clearSourcePort passed null and the
+    // old port survived, so deleting a seated port left it on the bench.
+    bool clearSourcePort = false,
+    bool clearIwad = false,
   }) {
     return LaunchState(
-      sourcePort: sourcePort ?? this.sourcePort,
-      iwad: iwad ?? this.iwad,
+      sourcePort: clearSourcePort ? null : sourcePort ?? this.sourcePort,
+      iwad: clearIwad ? null : iwad ?? this.iwad,
       pwads: pwads ?? this.pwads,
       customArgs: customArgs ?? this.customArgs,
       isLaunching: isLaunching ?? this.isLaunching,
       error: clearError ? null : error ?? this.error,
       launchSuccess: launchSuccess ?? this.launchSuccess,
       warp: clearWarp ? null : warp ?? this.warp,
+      gameplay: gameplay ?? this.gameplay,
     );
   }
 
@@ -67,8 +84,111 @@ class LaunchState {
 
 @riverpod
 class LaunchNotifier extends _$LaunchNotifier {
+  /// True while [restore] is writing the saved bench back in, so restoring
+  /// does not immediately re-save what it just read.
+  bool _restoring = false;
+
+  /// Nothing is written until the saved bench has been read back.
+  ///
+  /// listenSelf fires once when the provider mounts, carrying the empty
+  /// initial state — which promptly overwrote the saved loadout before
+  /// restore() could read it, so every restart came back empty and the box
+  /// looked like it had never been written.
+  bool _restored = false;
+
   @override
-  LaunchState build() => const LaunchState();
+  LaunchState build() {
+    // Every mutator persists through one place rather than each remembering
+    // to; forgetting one is how half a loadout comes back.
+    listenSelf((_, next) {
+      if (_restored && !_restoring) unawaited(_persist(next));
+    });
+    return const LaunchState();
+  }
+
+  /// Remembering the bench is a convenience, so a store that cannot be
+  /// written — no Hive yet, a read-only profile directory — costs the user
+  /// that convenience and nothing else. It must never take the launcher down.
+  Future<void> _persist(LaunchState s) async {
+    try {
+      await ref.read(loadoutStoreProvider).save(
+            SavedLoadout(
+              sourcePortId: s.sourcePort?.id,
+              iwadId: s.iwad?.id,
+              pwads: s.pwads,
+              customArgs: s.customArgs,
+              gameplay: s.gameplay,
+            ),
+          );
+    } catch (_) {
+      // Nothing the user can act on, and nothing worth a crash.
+    }
+  }
+
+  /// Puts the last bench back, as far as it still exists.
+  ///
+  /// The warp target is deliberately not saved at all: it is an intent for
+  /// one launch, and silently starting on MAP14 days later because that is
+  /// where you were last looking would be a surprise.
+  Future<void> restore() async {
+    // Set on every path out, including the failures: a bench that could not
+    // be read is still a bench the user can now change and expect kept.
+    try {
+      await _restoreInner();
+    } finally {
+      _restored = true;
+    }
+  }
+
+  Future<void> _restoreInner() async {
+    final SavedLoadout saved;
+    final SourcePort? port;
+    final Iwad? iwad;
+
+    // The whole read is guarded: a missing box, a box opened elsewhere with a
+    // different type, a corrupt record. None of that is worth refusing to
+    // start — the cost of failing here is an empty bench, and the cost of
+    // throwing is a launcher that will not open.
+    try {
+      final read = await ref.read(loadoutStoreProvider).read();
+      if (read == null) return;
+      saved = read;
+
+      port = saved.sourcePortId == null
+          ? null
+          : (await SourcePortRepositoryImpl(HiveService()).getPorts())
+              .cast<SourcePort?>()
+              .firstWhere(
+                (p) => p!.id == saved.sourcePortId,
+                orElse: () => null,
+              );
+
+      iwad = saved.iwadId == null
+          ? null
+          : (await IwadRepositoryImpl(HiveService()).getIwads())
+              .cast<Iwad?>()
+              .firstWhere(
+                (i) => i!.id == saved.iwadId,
+                orElse: () => null,
+              );
+    } catch (_) {
+      return;
+    }
+
+    _restoring = true;
+    state = state.copyWith(
+      sourcePort: port,
+      iwad: iwad,
+      pwads: saved.pwads,
+      customArgs: saved.customArgs,
+      gameplay: saved.gameplay,
+    );
+    _restoring = false;
+  }
+
+  void setGameplay(GameplayOptions options) {
+    state = state.copyWith(gameplay: options, clearError: true);
+  }
 
   void setSourcePort(SourcePort port) {
     state = state.copyWith(sourcePort: port, clearError: true);
@@ -106,7 +226,7 @@ class LaunchNotifier extends _$LaunchNotifier {
   }
 
   void clearSourcePort() {
-    state = state.copyWith(sourcePort: null);
+    state = state.copyWith(clearSourcePort: true);
   }
 
   void setIwad(Iwad iwad) {
@@ -114,7 +234,7 @@ class LaunchNotifier extends _$LaunchNotifier {
   }
 
   void clearIwad() {
-    state = state.copyWith(iwad: null);
+    state = state.copyWith(clearIwad: true);
   }
 
   void addPwads(List<Pwad> newPwads) {
@@ -194,6 +314,7 @@ class LaunchNotifier extends _$LaunchNotifier {
         port: state.sourcePort!,
         iwad: state.iwad!,
         warp: state.warp,
+        gameplay: state.gameplay,
       );
 
       final outcome = await ref.read(launchSequenceProvider.notifier).run(

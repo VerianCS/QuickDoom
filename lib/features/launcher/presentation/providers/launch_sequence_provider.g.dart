@@ -29,7 +29,7 @@ final launchAnimationEnabledProvider =
 );
 
 typedef _$LaunchAnimationEnabled = Notifier<bool>;
-String _$launchSequenceHash() => r'dd91f389fe37753d5c8f28b817c522aacde4ba7c';
+String _$launchSequenceHash() => r'0b3bcad43e028f235fc479b0bd6643cea54894b9';
 
 /// Drives the launch takeover.
 ///

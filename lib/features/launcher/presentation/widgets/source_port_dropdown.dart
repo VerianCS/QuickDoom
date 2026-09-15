@@ -7,6 +7,7 @@ import '../../../../core/services/file_picker_service.dart';
 import '../../../../domain/entities/source_port.dart';
 import '../../../source_ports/presentation/providers/source_port_provider.dart';
 import '../providers/launch_provider.dart';
+import '../providers/path_problem_provider.dart';
 import 'loadout_slot.dart';
 import 'slot_picker.dart';
 
@@ -30,6 +31,11 @@ class SourcePortSelector extends ConsumerWidget {
           : 'No engine seated',
       value: selected?.name,
       detail: selected?.executablePath,
+      // Checked here rather than only at launch, so a port that has been
+      // moved or uninstalled reads as broken instead of looking seated.
+      problem: selected == null
+          ? null
+          : ref.watch(portProblemProvider(selected.executablePath)).valueOrNull,
       onTap: () => _pick(context, ref, ports, selected),
       actions: [
         if (selected != null) ...[

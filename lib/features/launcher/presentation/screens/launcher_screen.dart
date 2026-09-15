@@ -21,6 +21,7 @@ import '../widgets/iwad_selector.dart';
 import '../widgets/pwad_rail.dart';
 import '../widgets/quick_launch_bar.dart';
 import '../widgets/source_port_dropdown.dart';
+import '../widgets/gameplay_panel.dart';
 import '../widgets/warp_plate.dart';
 
 class LauncherScreen extends ConsumerStatefulWidget {
@@ -31,6 +32,14 @@ class LauncherScreen extends ConsumerStatefulWidget {
 }
 
 class _LauncherScreenState extends ConsumerState<LauncherScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // The bench is rebuilt from what was on it when the app closed. Without
+    // this every restart started from two empty sockets.
+    ref.read(launchNotifierProvider.notifier).restore();
+  }
+
   Future<void> _loadProfile(WidgetRef ref, String profileId) async {
     final profileRepo = ProfileRepositoryImpl(HiveService());
     final profile = await profileRepo.getProfile(profileId);
@@ -118,6 +127,8 @@ class _LauncherScreenState extends ConsumerState<LauncherScreen> {
                           const SourcePortSelector(),
                           const SizedBox(height: 8),
                           const IwadSelector(),
+                          const SizedBox(height: 20),
+                          const GameplayPanel(),
                           const SizedBox(height: 20),
                           const PwadRail(),
                           const SizedBox(height: 20),

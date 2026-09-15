@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import '../../core/services/file_problem.dart';
 import '../../core/services/process_service.dart';
 import '../../domain/interfaces/i_process_launcher.dart';
 
@@ -33,32 +32,6 @@ class ProcessLauncherImpl implements IProcessLauncher {
   /// properties of the file can be read and a saved port that has since been
   /// moved, deleted or left non-executable gives a sentence rather than a
   /// failed spawn.
-  static Future<String?> describeProblem(String executable) async {
-    final path = executable.trim();
-    if (path.isEmpty) return 'No source port is set.';
-
-    final type = await FileSystemEntity.type(path);
-
-    if (type == FileSystemEntityType.notFound) {
-      return 'Source port not found: $path\n'
-          'It may have been moved, renamed or uninstalled.';
-    }
-
-    if (type == FileSystemEntityType.directory) {
-      return 'That is a folder, not a program: $path';
-    }
-
-    // Windows decides by extension and has no permission bit to read, so
-    // asking about one there would reject every valid port.
-    if (!Platform.isWindows) {
-      final mode = (await File(path).stat()).mode;
-      // 0o111: executable by owner, group or other.
-      if (mode & 0x49 == 0) {
-        return 'Source port is not executable: $path\n'
-            'Run: chmod +x "$path"';
-      }
-    }
-
-    return null;
-  }
+  static Future<String?> describeProblem(String executable) =>
+      FileProblem.describe(executable, needsExecuteBit: true);
 }
